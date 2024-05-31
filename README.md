@@ -1,6 +1,6 @@
 # odoo-instance
 
-This is a work in progress, don't trust 
+This is a work in progress 
 
 
 `odoo-instance` is a command-line tool to manage Odoo instances with ease. It provides various subcommands to generate configuration files, retrieve repository information, and more.
@@ -29,29 +29,95 @@ This is a work in progress, don't trust
    ```
 
 ### Usage
+#### odoo-instance
 
-After installation, you can use the `odoo-instance` command. Below are some examples of how to use it.
+##### Usage
 
-#### Generate `repos.yml`
+```
+Usage: odoo-instance [OPTIONS] COMMAND [ARGS]...
 
-This command generates a `repos.yml` file containing information about the Git repositories in your Odoo instance.
+```
+##### CLI Help
 
-```bash
-odoo-instance -d <database_name> -c /etc/odoo/odoo.conf generate_repos_yml -o /tmp/repos.yml
+```
+Usage: odoo-instance [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  -c, --config FILE               Specify the Odoo configuration file. Other
+                                  ways to provide it are with the ODOO_RC or
+                                  OPENERP_SERVER environment variables, or
+                                  ~/.odoorc (Odoo >= 10) or
+                                  ~/.openerp_serverrc.
+  -d, --database TEXT             Specify the database name. If present, this
+                                  parameter takes precedence over the database
+                                  provided in the Odoo configuration file.
+  --log-level TEXT                Specify the logging level. Accepted values
+                                  depend on the Odoo version, and include
+                                  debug, info, warn, error.  [default: warn]
+  --logfile FILE                  Specify the log file.
+  --rollback                      Rollback the transaction even if the script
+                                  does not raise an exception. Note that if
+                                  the script itself commits, this option has
+                                  no effect. This is why it is not named dry
+                                  run. This option is implied when an
+                                  interactive console is started.
+  --installed-addons-only / --include-all-addons
+                                  Work with installed addons only (default) or
+                                  include not installed addons
+  --help                          Show this message and exit.
+
+Commands:
+  generate-repos-yml  Generate repos.yml file for git-aggregator.
+  list-addons         List addons and their status
 ```
 
-**Options:**
-- `-d` : Specify the Odoo database name.
-- `-c` : Path to the Odoo configuration file.
-- `generate_repos_yml` : Subcommand to generate the `repos.yml` file.
-- `-o` : Output file path for the generated `repos.yml`.
 
-### Example
 
-To generate a `repos.yml` file for the database `myodoodbname` with the configuration file located at `/etc/odoo/odoo.conf` and output the results to `/tmp/repos.yml`, you would run:
+#### odoo-instance generate-repos-yml
 
-```bash
-odoo-instance -d myodoodbname -c /etc/odoo/odoo.conf generate_repos_yml -o /tmp/repos.yml
+Generate repos.yml file for git-aggregator. If your addons come from git repositories, this command will generate a repos.yml file for git-aggregate.
+
+##### Usage
+
+```
+Usage: odoo-instance generate-repos-yml [OPTIONS]
+
+```
+##### CLI Help
+
+```
+Usage: odoo-instance generate-repos-yml [OPTIONS]
+
+  Generate repos.yml file for git-aggregator. If your addons come from git
+  repositories, this command will generate a repos.yml file for git-aggregate.
+
+Options:
+  -o, --output PATH  Output file for repos.yml
+  --help             Show this message and exit.
+```
+
+
+
+#### odoo-instance list-addons
+
+List addons and their status
+
+##### Usage
+
+```
+Usage: odoo-instance list-addons [OPTIONS]
+
+```
+##### CLI Help
+
+```
+Usage: odoo-instance list-addons [OPTIONS]
+
+  List addons and their status
+
+Options:
+  --format [flat|json|csv]
+  --help                    Show this message and exit.
 ```
 
 ### Development

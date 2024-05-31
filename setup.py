@@ -12,7 +12,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "odoo-instance=commands.main:cli",
+            "odoo-instance=cli.cli:main",
         ],
     },
 )

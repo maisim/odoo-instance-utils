@@ -16,7 +16,7 @@ class Addon:
         self.git_repo = git_repo
         self.dependencies = []
         self.is_installed = False
-        self.is_dependency = False
+        self.is_dependency_of = []
         self.manifest = {}
 
     def __str__(self) -> str:
@@ -81,9 +81,9 @@ class Addon:
             "name": self.name,
             "path": self.path,
             "git_repo": self.git_repo,
-            "dependencies": [d.name for d in self.dependencies],
+            "dependencies": [a.name for a in self.dependencies],
             "is_installed": self.is_installed,
-            "is_dependency": self.is_dependency,
+            "is_dependency_of": [a.name for a in self.is_dependency_of],
             "repo_name": self.repo_name,
             "git_head": self.git_head,
             "remote": self.remote,
@@ -181,28 +181,22 @@ class Addons:
                 if infos["branch"]
                 else infos["head"]
             )
-            # TODO: use yaml.dump
-            # At this moment I am not able to get a correct yaml output with yaml.dump
-            content += f"""
-{repo_name}:
-  defaults: 
-    depth: 1
-  remotes:
-    {infos['remote']}: {infos['repo']}
-  merges: 
-    - {target}
-  target: {target}
-            """
 
-        return content
+        repos = {}
+        for repo_name, infos in self.build_sources_list().items():
+            target = (
+                infos["remote"] + " " + infos["branch"]
+                if infos["branch"]
+                else infos["head"]
+            )
+            repos[repo_name] = {
+                "defaults": {"depth": 1},
+                "remotes": {infos["remote"]: infos["repo"]},
+                "merges": [target],
+                "target": target,
+            }
 
-    def generate_addons_repo_from_github_short_list(self):
-        addons = [
-            f"{addon.remote}/{addon.repo_name}"
-            for addon in self.addons
-            if "github" in addon.git_repo
-        ]
-        return ",".join(set(addons))
+        return yaml.dump(repos, default_flow_style=False)
 
     def generate_modules_csv_content_for_oow(self):
         return "\n".join(
