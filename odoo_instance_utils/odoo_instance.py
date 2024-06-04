@@ -1,11 +1,13 @@
 import sys
+
+import odoo
+
 from .addons import Addons
 
 
 class OdooInstance:
 
-    def __init__(self, odoo=None, env=None):
-        self.odoo = odoo
+    def __init__(self, odoo=odoo, env=None):
         self.env = env
 
         self.version = odoo.release.version

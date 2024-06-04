@@ -1,7 +1,5 @@
 import click
 
-import odoo
-
 from odoo_instance_utils import OdooInstance
 
 
@@ -18,7 +16,7 @@ from odoo_instance_utils import OdooInstance
 @click.pass_context
 def generate_repos_yml(ctx, output=None):
     env = ctx.obj["odoo_env"]
-    odoo_instance = OdooInstance(odoo=odoo, env=env)
+    odoo_instance = OdooInstance(env=env)
 
     addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
 

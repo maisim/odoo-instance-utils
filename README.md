@@ -130,6 +130,10 @@ TODO
 - add other subcommands
 - add tests
 
+- Refactor the cli layout to get a stuff like: \
+    odoo-instance addon why addon_name \
+    odoo-instance addons python-dependencies \
+
 ### License
 
 This project is licensed under the AGPL 3 License. See the `LICENSE` file for details.

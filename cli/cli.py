@@ -3,6 +3,8 @@ import click_odoo
 
 from .cli_generate_repo_yml import generate_repos_yml
 from .cli_list_addons import list_addons
+from .cli_addon_why import addon_why
+from .cli_addons_python_dependencies import addons_python_dependencies
 
 
 @click.group("odoo-instance")
@@ -23,3 +25,5 @@ def main(ctx, **kwargs):
 
 main.add_command(generate_repos_yml)
 main.add_command(list_addons)
+main.add_command(addon_why)
+main.add_command(addons_python_dependencies)

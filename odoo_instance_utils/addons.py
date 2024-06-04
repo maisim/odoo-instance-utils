@@ -76,6 +76,10 @@ class Addon:
         if version:
             return ".".join(version.split(".")[0:2])
 
+    @property
+    def python_dependencies(self):
+        return self.manifest.get("external_dependencies", {}).get("python", [])
+
     def to_dict(self):
         return {
             "name": self.name,
@@ -213,13 +217,12 @@ class Addons:
             addons_dict[addon.repo_name].append(addon.name)
         return yaml.dump(addons_dict)
 
+    @property
     def python_dependencies(self):
         dependencies = []
         for addon in self.addons:
-            if addon.manifest.get("external_dependencies") and addon.manifest.get(
-                "external_dependencies"
-            ).get("python"):
-                dependencies.extend(addon.manifest["external_dependencies"]["python"])
+            dependencies.extend(addon.python_dependencies)
+
         return list(set(dependencies))
 
     def generate_requirements_txt(self):
