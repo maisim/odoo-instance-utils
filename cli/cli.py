@@ -7,6 +7,10 @@ from .cli_list_addons import list_addons
 from .cli_addon_why import addon_why
 from .cli_addons_python_dependencies import addons_python_dependencies
 from .cli_addons_install import addons_install
+from .cli_dump_filters import dump_filters
+from .cli_restore_filters import restore_filters
+from .cli_dump_exports import dump_exports
+from .cli_restore_exports import restore_exports
 
 
 
@@ -32,3 +36,7 @@ main.add_command(list_addons)
 main.add_command(addon_why)
 main.add_command(addons_python_dependencies)
 main.add_command(addons_install)
+main.add_command(dump_filters)
+main.add_command(restore_filters)
+main.add_command(dump_exports)
+main.add_command(restore_exports)
