@@ -1,7 +1,8 @@
 import click
 import click_odoo
 
-from .cli_generate_repo_yml import generate_repos_yml
+from .cli_generate_repo_yaml import generate_repos_yaml
+from .cli_addons_generate_addons_yaml import generate_addons_yaml
 from .cli_list_addons import list_addons
 from .cli_addon_why import addon_why
 from .cli_addons_python_dependencies import addons_python_dependencies
@@ -23,7 +24,8 @@ def main(ctx, **kwargs):
     ctx.obj["installed_addons_only"] = kwargs["installed_addons_only"]
 
 
-main.add_command(generate_repos_yml)
+main.add_command(generate_repos_yaml)
+main.add_command(generate_addons_yaml)
 main.add_command(list_addons)
 main.add_command(addon_why)
 main.add_command(addons_python_dependencies)

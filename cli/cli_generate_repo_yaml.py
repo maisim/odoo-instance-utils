@@ -14,7 +14,7 @@ from odoo_instance_utils import OdooInstance
     help="Output file for repos.yml",
 )
 @click.pass_context
-def generate_repos_yml(ctx, output=None):
+def generate_repos_yaml(ctx, output=None):
     env = ctx.obj["odoo_env"]
     odoo_instance = OdooInstance(env=env)
 

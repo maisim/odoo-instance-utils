@@ -1,5 +1,8 @@
 import os
 import sys
+
+from ast import literal_eval
+
 from .exceptions import ConflictError, IntegrityError
 import yaml
 
@@ -80,6 +83,10 @@ class Addon:
     def python_dependencies(self):
         return self.manifest.get("external_dependencies", {}).get("python", [])
 
+    @property
+    def auto_install(self):
+        return self.manifest.get("auto_install", False)
+
     def to_dict(self):
         return {
             "name": self.name,
@@ -93,6 +100,7 @@ class Addon:
             "remote": self.remote,
             "version": self.version,
             "target_version": self.target_version,
+            "auto_install": self.auto_install,
         }
 
 
@@ -100,6 +108,8 @@ class Addons:
 
     # Filters
     installed = None
+    minimize_list = False
+    include_auto_installed_addons = True
 
     def __init__(self, addons_paths: list = [], addons: list = []):
         self._addons = addons
@@ -107,9 +117,17 @@ class Addons:
         if addons_paths:
             self.fill_from_addons_paths()
 
-    def __call__(self, installed=None, remotes=None):
+    def __call__(
+        self,
+        installed=None,
+        minimize_list=False,
+        include_auto_installed_addons=True,
+        remotes=None,
+    ):
         """Filter the addons list"""
         self.installed = installed
+        self.minimize_list = minimize_list
+        self.include_auto_installed_addons = include_auto_installed_addons
         self.remotes = remotes
         return self
 
@@ -133,8 +151,24 @@ class Addons:
             return [a for a in self._addons if a.is_installed]
         elif self.installed is False:
             return [a for a in self._addons if not a.is_installed]
-        else:
-            return self._addons
+
+        if self.include_auto_installed_addons is False:
+            return [a for a in self._addons if not a.auto_install]
+
+        if self.minimize_list:
+            current_addons_names = [a.name for a in self._addons]
+            addons = [a for a in self._addons if a.name not in current_addons_names]
+            return addons
+
+        return self._addons
+
+    @property
+    def python_dependencies(self):
+        dependencies = []
+        for addon in self.addons:
+            dependencies.extend(addon.python_dependencies)
+
+        return list(set(dependencies))
 
     def fill_from_addons_paths(self):
         """Fill the addons list from the addons paths defined in self.addons_paths"""
@@ -157,7 +191,7 @@ class Addons:
                     ):
                         addon = Addon(name=item, path=item_path, git_repo=git_repo)
                         with open(os.path.join(item_path, "__manifest__.py"), "r") as f:
-                            addon.manifest = eval(f.read())
+                            addon.manifest = literal_eval(f.read())
                         self.addons.append(addon)
 
     def to_dict(self):
@@ -175,10 +209,20 @@ class Addons:
                 }
         return sources
 
+    def generate_requirements_txt(self):
+        dependencies = []
+        for dep in self.python_dependencies():
+            try:
+                dependencies.append(
+                    f"{dep}=={importlib_metadata.version(dep).split('+')[0]}"
+                )
+            except importlib_metadata.PackageNotFoundError:
+                dependencies.append(dep)
+        return "\n".join(dependencies)
+
     def generate_repos_yaml(self):
         """Generate the content of the repos.yaml file for the addons part"""
 
-        content = ""
         for repo_name, infos in self.build_sources_list().items():
             target = (
                 infos["remote"] + " " + infos["branch"]
@@ -202,11 +246,6 @@ class Addons:
 
         return yaml.dump(repos, default_flow_style=False)
 
-    def generate_modules_csv_content_for_oow(self):
-        return "\n".join(
-            f"{addon.name},{addon.manifest.get('name', '')}" for addon in self.addons
-        )
-
     def generate_addons_yaml(self):
         addons_dict = {}
         for addon in self.addons:
@@ -215,23 +254,10 @@ class Addons:
             if addon.repo_name not in addons_dict:
                 addons_dict[addon.repo_name] = []
             addons_dict[addon.repo_name].append(addon.name)
-        return yaml.dump(addons_dict)
 
-    @property
-    def python_dependencies(self):
-        dependencies = []
-        for addon in self.addons:
-            dependencies.extend(addon.python_dependencies)
+        return yaml.dump(addons_dict, default_flow_style=False)
 
-        return list(set(dependencies))
-
-    def generate_requirements_txt(self):
-        dependencies = []
-        for dep in self.python_dependencies():
-            try:
-                dependencies.append(
-                    f"{dep}=={importlib_metadata.version(dep).split('+')[0]}"
-                )
-            except importlib_metadata.PackageNotFoundError:
-                dependencies.append(dep)
-        return "\n".join(dependencies)
+    def generate_modules_csv_content_for_oow(self):
+        return "\n".join(
+            f"{addon.name},{addon.manifest.get('name', '')}" for addon in self.addons
+        )

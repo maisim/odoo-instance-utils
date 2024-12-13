@@ -17,10 +17,9 @@ def list_addons(ctx, minimize_list, format):
     env = ctx.obj["odoo_env"]
     odoo_instance = OdooInstance(env=env)
 
-    addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
-
-    if minimize_list:
-        addons = [a for a in addons if not a.is_dependency_of]
+    addons = odoo_instance.addons(
+        installed=ctx.obj["installed_addons_only"], minimize_list=minimize_list
+    )
 
     if format == "json":
         click.echo(json.dumps(list(addons.to_dict())))
