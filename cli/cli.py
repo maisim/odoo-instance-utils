@@ -6,6 +6,8 @@ from .cli_addons_generate_addons_yaml import generate_addons_yaml
 from .cli_list_addons import list_addons
 from .cli_addon_why import addon_why
 from .cli_addons_python_dependencies import addons_python_dependencies
+from .cli_addons_install import addons_install
+
 
 
 @click.group("odoo-instance")
@@ -29,3 +31,4 @@ main.add_command(generate_addons_yaml)
 main.add_command(list_addons)
 main.add_command(addon_why)
 main.add_command(addons_python_dependencies)
+main.add_command(addons_install)
