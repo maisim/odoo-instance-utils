@@ -1,0 +1,26 @@
+import click
+from odoo_instance_utils import OdooInstance
+
+@click.group("filters")
+def filters_group():
+    """Filter management commands."""
+    pass
+
+@filters_group.command("dump")
+@click.argument("ids", required=True, type=str)
+@click.pass_context
+def dump_filters(ctx, ids):
+    """Dump filters."""
+    env = ctx.obj["odoo_env"]
+    ids = [id.strip() for id in ids.split(",")]
+    instance = OdooInstance(env=env)
+    click.echo(instance.dump_filters(ids))
+
+@filters_group.command("restore")
+@click.argument("filters", required=True, type=str)
+@click.pass_context
+def restore_filters(ctx, filters):
+    """Restore filters."""
+    env = ctx.obj["odoo_env"]
+    instance = OdooInstance(env=env)
+    click.echo(instance.restore_filters(filters))
