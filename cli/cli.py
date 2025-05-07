@@ -11,6 +11,7 @@ from .cli_dump_filters import dump_filters
 from .cli_restore_filters import restore_filters
 from .cli_dump_exports import dump_exports
 from .cli_restore_exports import restore_exports
+from .cli_view import view_group
 
 
 
@@ -40,3 +41,4 @@ main.add_command(dump_filters)
 main.add_command(restore_filters)
 main.add_command(dump_exports)
 main.add_command(restore_exports)
+main.add_command(view_group)
