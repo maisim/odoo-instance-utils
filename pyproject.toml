@@ -7,9 +7,13 @@ name = "odoo-instance-utils"
 version = "0.1.0"
 requires-python = ">=3.8"
 dependencies = [
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+cli = [
     "click",
     "click-odoo",
-    "pyyaml",
 ]
 
 [project.scripts]
