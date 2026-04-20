@@ -13,8 +13,8 @@ dependencies = [
 ]
 
 [project.scripts]
-odoo-instance = "cli.cli:main"
+odoo-instance = "odoo_instance_utils.cli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["cli*", "odoo_instance_utils*"]
+include = ["odoo_instance_utils*"]
