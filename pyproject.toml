@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "odoo-instance-utils"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+    "click",
+    "click-odoo",
+    "pyyaml",
+]
+
+[project.scripts]
+odoo-instance = "cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cli*", "odoo_instance_utils*"]
