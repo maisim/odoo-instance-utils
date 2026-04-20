@@ -1,11 +1,11 @@
 import os
-import sys
 import subprocess
-
+import sys
 from ast import literal_eval
 
-from .exceptions import ConflictError, IntegrityError
 import yaml
+
+from .exceptions import ConflictError, IntegrityError
 
 if sys.version_info < (3, 8):
     import importlib_metadata
@@ -166,7 +166,6 @@ class Addons:
 
         if self.minimize_list:
             # Keep only addons not already covered as a dependency of another included addon
-            installed_names = {a.name for a in self._addons if a.is_installed}
             addons = [
                 a for a in self._addons
                 if a.is_installed and not any(

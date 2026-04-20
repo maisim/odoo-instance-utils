@@ -1,6 +1,8 @@
 import difflib
 from typing import Any, Dict, Optional
+
 from odoo.api import Environment
+
 
 def export(env: Environment, xmlid: str) -> Optional[Dict[str, Any]]:
     """

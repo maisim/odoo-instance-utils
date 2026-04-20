@@ -1,8 +1,10 @@
 import json
-import click
-import click_odoo
 import sys
-from odoo_instance_utils.views import export, diff 
+
+import click
+
+from odoo_instance_utils.views import diff, export
+
 
 @click.group("view")
 def view_group():

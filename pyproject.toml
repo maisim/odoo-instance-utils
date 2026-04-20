@@ -19,7 +19,23 @@ cli = [
 [dependency-groups]
 dev = [
     "pytest",
+    "ruff",
+    "mypy",
 ]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [project.scripts]
 odoo-instance = "odoo_instance_utils.cli.cli:main"

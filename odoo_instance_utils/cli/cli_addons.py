@@ -1,5 +1,7 @@
 import click
+
 from odoo_instance_utils import OdooInstance
+
 
 @click.group("addons")
 def addons_group():

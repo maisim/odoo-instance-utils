@@ -2,8 +2,8 @@ import click
 import click_odoo
 
 from .cli_addons import addons_group
-from .cli_filters import filters_group
 from .cli_exports import exports_group
+from .cli_filters import filters_group
 from .cli_view import view_group
 
 

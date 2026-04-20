@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
+
 from odoo_instance_utils.addons import Addon
 from odoo_instance_utils.exceptions import ConflictError, IntegrityError
-from unittest.mock import patch, MagicMock
 
 
 def make_addon(name="sale", git_repo="", manifest=None):
