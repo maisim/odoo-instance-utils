@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 
 from ast import literal_eval
 
@@ -47,17 +48,25 @@ class Addon:
     @property
     def git_head(self):
         if self.git_repo:
-            return os.popen(f"cd {self.path} && git rev-parse HEAD").read().strip()
+            result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=self.path,
+                capture_output=True,
+                text=True,
+            )
+            return result.stdout.strip()
         return ""
 
     @property
     def git_branch(self):
         if self.git_repo:
-            branch = (
-                os.popen(f"cd {self.path} && git rev-parse --abbrev-ref HEAD")
-                .read()
-                .strip()
+            result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=self.path,
+                capture_output=True,
+                text=True,
             )
+            branch = result.stdout.strip()
             if branch == "HEAD":
                 raise IntegrityError(
                     f"Repo {self.repo_name} is in detached HEAD state ({self._path})"
@@ -156,8 +165,16 @@ class Addons:
             return [a for a in self._addons if not a.auto_install]
 
         if self.minimize_list:
-            current_addons_names = [a.name for a in self._addons]
-            addons = [a for a in self._addons if a.name not in current_addons_names]
+            # Keep only addons not already covered as a dependency of another included addon
+            installed_names = {a.name for a in self._addons if a.is_installed}
+            addons = [
+                a for a in self._addons
+                if a.is_installed and not any(
+                    a.name in [d.name for d in other.dependencies]
+                    for other in self._addons
+                    if other.is_installed
+                )
+            ]
             return addons
 
         return self._addons
@@ -176,13 +193,13 @@ class Addons:
             if os.path.isdir(addons_path):
                 git_repo = ""
                 if os.path.isdir(os.path.join(addons_path, ".git")):
-                    git_repo = (
-                        os.popen(
-                            f"cd {addons_path} && git config --get remote.origin.url"
-                        )
-                        .read()
-                        .strip()
+                    result = subprocess.run(
+                        ["git", "config", "--get", "remote.origin.url"],
+                        cwd=addons_path,
+                        capture_output=True,
+                        text=True,
                     )
+                    git_repo = result.stdout.strip()
 
                 for item in os.listdir(addons_path):
                     item_path = os.path.join(addons_path, item)
@@ -192,7 +209,7 @@ class Addons:
                         addon = Addon(name=item, path=item_path, git_repo=git_repo)
                         with open(os.path.join(item_path, "__manifest__.py"), "r") as f:
                             addon.manifest = literal_eval(f.read())
-                        self.addons.append(addon)
+                        self._addons.append(addon)
 
     def to_dict(self):
         yield from (a.to_dict() for a in self.addons)
@@ -211,7 +228,7 @@ class Addons:
 
     def generate_requirements_txt(self):
         dependencies = []
-        for dep in self.python_dependencies():
+        for dep in self.python_dependencies:
             try:
                 dependencies.append(
                     f"{dep}=={importlib_metadata.version(dep).split('+')[0]}"
@@ -222,14 +239,6 @@ class Addons:
 
     def generate_repos_yaml(self):
         """Generate the content of the repos.yaml file for the addons part"""
-
-        for repo_name, infos in self.build_sources_list().items():
-            target = (
-                infos["remote"] + " " + infos["branch"]
-                if infos["branch"]
-                else infos["head"]
-            )
-
         repos = {}
         for repo_name, infos in self.build_sources_list().items():
             target = (
