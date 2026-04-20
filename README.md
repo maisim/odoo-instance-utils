@@ -67,26 +67,26 @@ Options:
   --help                          Show this message and exit.
 
 Commands:
-  generate-repos-yml  Generate repos.yml file for git-aggregator.
+  generate-repos-yaml  Generate repos.yml file for git-aggregator.
   list-addons         List addons and their status
 ```
 
 
 
-#### odoo-instance generate-repos-yml
+#### odoo-instance generate-repos-yaml
 
 Generate repos.yml file for git-aggregator. If your addons come from git repositories, this command will generate a repos.yml file for git-aggregate.
 
 ##### Usage
 
 ```
-Usage: odoo-instance generate-repos-yml [OPTIONS]
+Usage: odoo-instance generate-repos-yaml [OPTIONS]
 
 ```
 ##### CLI Help
 
 ```
-Usage: odoo-instance generate-repos-yml [OPTIONS]
+Usage: odoo-instance generate-repos-yaml [OPTIONS]
 
   Generate repos.yml file for git-aggregator. If your addons come from git
   repositories, this command will generate a repos.yml file for git-aggregate.
@@ -146,26 +146,26 @@ Options:
 Commands:
   addon-why                   List modules that depend on the given module
   addons-python-dependencies  List python dependencies for the instance...
-  generate-repos-yml          Generate repos.yml file for git-aggregator.
+  generate-repos-yaml          Generate repos.yml file for git-aggregator.
   list-addons                 List addons and their status
 ```
 
 
 
-#### odoo-instance generate-repos-yml
+#### odoo-instance generate-repos-yaml
 
 Generate repos.yml file for git-aggregator. If your addons come from git repositories, this command will generate a repos.yml file for git-aggregate.
 
 ##### Usage
 
 ```
-Usage: odoo-instance generate-repos-yml [OPTIONS]
+Usage: odoo-instance generate-repos-yaml [OPTIONS]
 
 ```
 ##### CLI Help
 
 ```
-Usage: odoo-instance generate-repos-yml [OPTIONS]
+Usage: odoo-instance generate-repos-yaml [OPTIONS]
 
   Generate repos.yml file for git-aggregator. If your addons come from git
   repositories, this command will generate a repos.yml file for git-aggregate.
