@@ -4,7 +4,7 @@ default:
 stages:
   - quality
   - test
-  - publish
+  - release
 
 variables:
   UV_CACHE_DIR: .uv-cache
@@ -45,15 +45,28 @@ test:
   script:
     - uv run pytest tests/ -v
 
-publish:
-  stage: publish
+release:
+  stage: release
   before_script:
     - pip install uv --quiet
+    - uv sync --group dev
+    - git config user.email "gitlab-ci@${CI_SERVER_HOST}"
+    - git config user.name "GitLab CI"
+    - git remote set-url origin "https://gitlab-ci-token:${GL_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   script:
-    - uv build
-    - uv publish
-        --publish-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi"
-        --username gitlab-ci-token
-        --password "${CI_JOB_TOKEN}"
+    # Check if conventional commits since last tag warrant a version bump
+    - NEW_VERSION=$(uv run semantic-release version --print 2>/dev/null)
+    - |
+      if [ -n "$NEW_VERSION" ]; then
+        echo "Releasing version $NEW_VERSION"
+        uv run semantic-release version --push
+        uv build
+        uv publish \
+          --publish-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" \
+          --username gitlab-ci-token \
+          --password "${CI_JOB_TOKEN}"
+      else
+        echo "No version bump warranted, skipping release."
+      fi
   rules:
-    - if: $CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+$/
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /\[skip ci\]/
