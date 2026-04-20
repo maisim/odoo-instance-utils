@@ -120,8 +120,8 @@ class Addons:
     minimize_list = False
     include_auto_installed_addons = True
 
-    def __init__(self, addons_paths: str = "", addons: list = []):
-        self._addons = addons
+    def __init__(self, addons_paths: str = "", addons: list = None):
+        self._addons = list(addons) if addons is not None else []
         self.addons_paths = addons_paths
         if addons_paths:
             self.fill_from_addons_paths()
