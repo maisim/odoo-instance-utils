@@ -3,7 +3,6 @@ import json
 import logging
 from typing import List, Dict, Any
 import odoo
-from odoo.exceptions import ValidationError
 from .addons import Addons
 
 _logger = logging.getLogger(__name__)
