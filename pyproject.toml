@@ -19,6 +19,7 @@ cli = [
 [dependency-groups]
 dev = [
     "pytest",
+    "pre-commit",
     "ruff",
     "mypy",
     "types-pyyaml",
@@ -35,6 +36,7 @@ ignore = ["E501"]
 [tool.mypy]
 ignore_missing_imports = true
 check_untyped_defs = true
+exclude = ["tests/fixtures/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

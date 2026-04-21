@@ -27,15 +27,7 @@ lint:
   stage: quality
   <<: *install
   script:
-    - uv run ruff check .
-    - uv run ruff format --check .
-
-typecheck:
-  extends: .on-mr-and-main
-  stage: quality
-  <<: *install
-  script:
-    - uv run mypy odoo_instance_utils/
+    - uv run pre-commit run --all-files
 
 test:
   extends: .on-mr-and-main
