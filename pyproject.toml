@@ -47,6 +47,7 @@ branch = "main"
 commit_version_number = true
 tag_commit = true
 major_on_zero = false
+allow_zero_version = true
 commit_message = "chore: release {version} [skip ci]"
 
 [tool.semantic_release.remote]
