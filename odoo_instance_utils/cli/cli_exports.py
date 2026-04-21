@@ -27,4 +27,4 @@ def restore_exports(ctx, exports):
     """Restore exports."""
     env = ctx.obj["odoo_env"]
     instance = OdooInstance(env=env)
-    click.echo(instance.restore_exports(exports))
+    instance.restore_exports(exports)

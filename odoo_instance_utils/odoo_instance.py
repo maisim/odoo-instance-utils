@@ -31,7 +31,6 @@ class OdooInstance:
         self.env = env
         self.version = odoo.release.version
         self.major_version = odoo.release.major_version
-        self.python_version = sys.version
         self.addons = Addons(addons_paths=odoo.tools.config["addons_path"])
         self.update_addons_status()
 

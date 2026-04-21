@@ -27,4 +27,4 @@ def restore_filters(ctx, filters):
     """Restore filters."""
     env = ctx.obj["odoo_env"]
     instance = OdooInstance(env=env)
-    click.echo(instance.restore_filters(filters))
+    instance.restore_filters(filters)

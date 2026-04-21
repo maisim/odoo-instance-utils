@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
@@ -119,7 +121,7 @@ class Addons:
     include_auto_installed_addons = True
     needs_upgrade = None
 
-    def __init__(self, addons_paths: str = "", addons: list = None):
+    def __init__(self, addons_paths: str = "", addons: list | None = None):
         self._addons = list(addons) if addons is not None else []
         self.addons_paths = addons_paths
         if addons_paths:
@@ -251,7 +253,7 @@ class Addons:
         return yaml.dump(repos, default_flow_style=False)
 
     def generate_addons_yaml(self):
-        addons_dict = {}
+        addons_dict: dict[str, list[str]] = {}
         for addon in self.addons:
             if not addon.repo_name:
                 continue
