@@ -26,14 +26,22 @@ def addons_install(ctx, addons_names):
     default=False,
     help="Minimize the list of addons (to install) with the game of dependencies",
 )
+@click.option(
+    "--needs-upgrade",
+    is_flag=True,
+    default=False,
+    help="Only show addons that need an upgrade",
+)
 @click.option("--format", type=click.Choice(["flat", "json", "csv"]), default="flat")
 @click.pass_context
-def list_addons(ctx, minimize_list, format):
+def list_addons(ctx, minimize_list, needs_upgrade, format):
     """List addons and their status."""
     env = ctx.obj["odoo_env"]
     odoo_instance = OdooInstance(env=env)
     addons = odoo_instance.addons(
-        installed=ctx.obj["installed_addons_only"], minimize_list=minimize_list
+        installed=ctx.obj["installed_addons_only"],
+        minimize_list=minimize_list,
+        needs_upgrade=True if needs_upgrade else None,
     )
     if format == "json":
         import json

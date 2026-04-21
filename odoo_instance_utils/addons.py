@@ -20,6 +20,7 @@ class Addon:
         self.git_repo = git_repo
         self.dependencies = []
         self.is_installed = False
+        self.needs_upgrade = False
         self.is_dependency_of = []
         self.manifest = {}
 
@@ -119,6 +120,7 @@ class Addons:
     installed = None
     minimize_list = False
     include_auto_installed_addons = True
+    needs_upgrade = None
 
     def __init__(self, addons_paths: str = "", addons: list = None):
         self._addons = list(addons) if addons is not None else []
@@ -132,12 +134,14 @@ class Addons:
         minimize_list=False,
         include_auto_installed_addons=True,
         remotes=None,
+        needs_upgrade=None,
     ):
         """Filter the addons list"""
         self.installed = installed
         self.minimize_list = minimize_list
         self.include_auto_installed_addons = include_auto_installed_addons
         self.remotes = remotes
+        self.needs_upgrade = needs_upgrade
         return self
 
     def __str__(self):
@@ -156,6 +160,9 @@ class Addons:
 
     @property
     def addons(self):
+        if self.needs_upgrade is True:
+            return [a for a in self._addons if a.needs_upgrade]
+
         if self.installed is True:
             return [a for a in self._addons if a.is_installed]
         elif self.installed is False:

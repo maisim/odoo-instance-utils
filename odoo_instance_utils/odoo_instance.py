@@ -37,6 +37,9 @@ class OdooInstance:
             for dep in module.dependencies_id:
                 self.addons[dep.name].is_dependency_of.append(self.addons[module.name])
                 self.addons[module.name].dependencies.append(self.addons[dep.name])
+        for module in OdooInstanceModule.search([("state", "=", "to upgrade")]):
+            self.addons[module.name].is_installed = True
+            self.addons[module.name].needs_upgrade = True
 
     def install_addons(self, addons_names: List[str]) -> List[str]:
         """Install addons by name and return the list of installed addon names."""

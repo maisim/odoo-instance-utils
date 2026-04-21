@@ -42,6 +42,18 @@ class TestAddonsFiltering:
         addons = make_addons(crm, sale)(include_auto_installed_addons=False)
         assert list(addons) == [sale]
 
+    def test_filter_needs_upgrade(self):
+        sale = make_addon("sale", is_installed=True)
+        sale.needs_upgrade = True
+        account = make_addon("account", is_installed=True)
+        addons = make_addons(sale, account)(needs_upgrade=True)
+        assert list(addons) == [sale]
+
+    def test_filter_needs_upgrade_empty(self):
+        sale = make_addon("sale", is_installed=True)
+        addons = make_addons(sale)(needs_upgrade=True)
+        assert list(addons) == []
+
     def test_minimize_list_removes_covered_deps(self):
         account = make_addon("account", is_installed=True)
         sale = make_addon("sale", is_installed=True)
