@@ -38,6 +38,8 @@ test:
 
 release:
   stage: release
+  variables:
+    GIT_DEPTH: 0
   before_script:
     - curl -LsSf https://astral.sh/uv/install.sh | sh
     - export PATH="$HOME/.local/bin:$PATH"
