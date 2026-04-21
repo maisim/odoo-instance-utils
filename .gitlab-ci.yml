@@ -1,3 +1,5 @@
+image: python:3.12
+
 stages:
   - quality
   - test
@@ -5,12 +7,10 @@ stages:
 
 variables:
   UV_CACHE_DIR: .uv-cache
-  UV_LINK_MODE: copy
 
 .install: &install
   before_script:
-    - curl -LsSf https://astral.sh/uv/install.sh | sh
-    - export PATH="$HOME/.local/bin:$PATH"
+    - pip install uv
     - uv sync --group dev
   cache:
     key: uv-$CI_COMMIT_REF_SLUG
@@ -25,6 +25,7 @@ variables:
 lint:
   extends: .on-mr-and-main
   stage: quality
+  tags: [docker]
   <<: *install
   script:
     - uv run pre-commit run --all-files
@@ -32,17 +33,18 @@ lint:
 test:
   extends: .on-mr-and-main
   stage: test
+  tags: [docker]
   <<: *install
   script:
     - uv run pytest tests/ -v
 
 release:
   stage: release
+  tags: [docker]
   variables:
     GIT_DEPTH: 0
   before_script:
-    - curl -LsSf https://astral.sh/uv/install.sh | sh
-    - export PATH="$HOME/.local/bin:$PATH"
+    - pip install uv
     - uv sync --group dev
     - git config user.email "gitlab-ci@${CI_SERVER_HOST}"
     - git config user.name "GitLab CI"
