@@ -31,6 +31,7 @@ def export(env: Environment, xmlid: str) -> Optional[Dict[str, Any]]:
         "arch_prev": view.arch_prev,
     }
 
+
 def diff(env: Environment, xmlid: str, filepath: str) -> Dict[str, Any]:
     """
     Compare an Odoo view with a local file via its external id (xmlid).
@@ -39,18 +40,18 @@ def diff(env: Environment, xmlid: str, filepath: str) -> Dict[str, Any]:
     view = env.ref(xmlid, raise_if_not_found=False)
     if not view:
         return {"found": False, "error": f"View with xmlid '{xmlid}' not found."}
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         file_content = f.read().splitlines()
-    raw_view = env['ir.ui.view'].browse(view.id).with_context(lang=None)
+    raw_view = env["ir.ui.view"].browse(view.id).with_context(lang=None)
     view_content = raw_view.arch_db.splitlines()
     diff = difflib.unified_diff(
         view_content,
         file_content,
         fromfile=f"Odoo view ({xmlid})",
         tofile=f"Local file ({filepath})",
-        lineterm='',
+        lineterm="",
     )
-    diff_output = '\n'.join(diff)
+    diff_output = "\n".join(diff)
     return {
         "found": True,
         "match": not bool(diff_output),

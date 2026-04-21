@@ -8,6 +8,7 @@ def filters_group():
     """Filter management commands."""
     pass
 
+
 @filters_group.command("dump")
 @click.argument("ids", required=True, type=str)
 @click.pass_context
@@ -17,6 +18,7 @@ def dump_filters(ctx, ids):
     ids = [id.strip() for id in ids.split(",")]
     instance = OdooInstance(env=env)
     click.echo(instance.dump_filters(ids))
+
 
 @filters_group.command("restore")
 @click.argument("filters", required=True, type=str)

@@ -10,10 +10,19 @@ from .addons import Addons
 
 _logger = logging.getLogger(__name__)
 
+
 class OdooInstance:
     FILTER_FIELDS = [
-        "name", "model_id", "domain", "user_id", "context", "action_id",
-        "sort", "active", "is_default", "create_uid"
+        "name",
+        "model_id",
+        "domain",
+        "user_id",
+        "context",
+        "action_id",
+        "sort",
+        "active",
+        "is_default",
+        "create_uid",
     ]
     EXPORT_FIELDS = ["name", "resource", "display_name", "create_uid"]
     EXPORT_LINE_FIELDS = ["name", "sequence", "create_uid"]
@@ -44,9 +53,9 @@ class OdooInstance:
     def install_addons(self, addons_names: List[str]) -> List[str]:
         """Install addons by name and return the list of installed addon names."""
         OdooInstanceModule = self.env["ir.module.module"]
-        addons_to_install = OdooInstanceModule.search([
-            ("name", "in", addons_names), ("state", "!=", "installed")
-        ])
+        addons_to_install = OdooInstanceModule.search(
+            [("name", "in", addons_names), ("state", "!=", "installed")]
+        )
         addons_to_install.button_immediate_install()
         return addons_to_install.mapped("name")
 
@@ -62,21 +71,34 @@ class OdooInstance:
     def restore_filters(self, filters_json: str) -> None:
         """Restore filters from JSON."""
         filters = json.loads(filters_json)
-        _logger.info("Restoring filters on database '%s' using Python %s", self.env.cr.dbname, self.python_version)
+        _logger.info(
+            "Restoring filters on database '%s' using Python %s",
+            self.env.cr.dbname,
+            self.python_version,
+        )
         _logger.info("Current user: %s (id: %s)", self.env.user.name, self.env.user.id)
         for filter_data in filters:
             self._restore_single_filter(filter_data)
 
     def _restore_single_filter(self, filter_data: Dict[str, Any]) -> None:
         """Restore a single filter, deleting any existing one with the same name/model/user."""
-        existing_filters = self.env["ir.filters"].search([
-            ("name", "=", filter_data["name"]),
-            ("model_id", "=", filter_data["model_id"]),
-            ("user_id", "=", filter_data["user_id"]),
-        ])
-        _logger.info("Found %s existing filters with name '%s' and model '%s'", len(existing_filters), filter_data["name"], filter_data["model_id"])
+        existing_filters = self.env["ir.filters"].search(
+            [
+                ("name", "=", filter_data["name"]),
+                ("model_id", "=", filter_data["model_id"]),
+                ("user_id", "=", filter_data["user_id"]),
+            ]
+        )
+        _logger.info(
+            "Found %s existing filters with name '%s' and model '%s'",
+            len(existing_filters),
+            filter_data["name"],
+            filter_data["model_id"],
+        )
         existing_filters.unlink()
-        _logger.info("Creating filter '%s' on model '%s'", filter_data["name"], filter_data["model_id"])
+        _logger.info(
+            "Creating filter '%s' on model '%s'", filter_data["name"], filter_data["model_id"]
+        )
         filter_owner = self.env["res.users"].browse(filter_data.pop("create_uid"))
         filter_data["create_uid"] = filter_owner.id
         filter_id = self.env["ir.filters"].with_user(filter_owner).create(filter_data).id
@@ -89,9 +111,11 @@ class OdooInstance:
         exports = self.env["ir.exports"].search([("id", "in", ids)])
         dump = exports.read(fields=self.EXPORT_FIELDS, load=None)
         for export in dump:
-            export_fields = self.env["ir.exports.line"].search([
-                ("export_id", "=", export["id"])
-            ], order="sequence").read(fields=self.EXPORT_LINE_FIELDS, load=None)
+            export_fields = (
+                self.env["ir.exports.line"]
+                .search([("export_id", "=", export["id"])], order="sequence")
+                .read(fields=self.EXPORT_LINE_FIELDS, load=None)
+            )
             for export_field in export_fields:
                 export_field.pop("id", None)
             export["export_fields"] = export_fields
@@ -102,18 +126,29 @@ class OdooInstance:
     def restore_exports(self, exports_json: str) -> None:
         """Restore exports from JSON, including their lines."""
         exports = json.loads(exports_json)
-        _logger.info("Restoring exports on database '%s' using Python %s", self.env.cr.dbname, self.python_version)
+        _logger.info(
+            "Restoring exports on database '%s' using Python %s",
+            self.env.cr.dbname,
+            self.python_version,
+        )
         _logger.info("Current user: %s (id: %s)", self.env.user.name, self.env.user.id)
         for export in exports:
             self._restore_single_export(export)
 
     def _restore_single_export(self, export: Dict[str, Any]) -> None:
-        existing_exports = self.env["ir.exports"].search([
-            ("name", "=", export["name"]),
-            ("resource", "=", export["resource"]),
-            ("create_uid.id", "=", export["create_uid"])
-        ])
-        _logger.info("Found %s existing exports with name '%s' and resource '%s'", len(existing_exports), export["name"], export["resource"])
+        existing_exports = self.env["ir.exports"].search(
+            [
+                ("name", "=", export["name"]),
+                ("resource", "=", export["resource"]),
+                ("create_uid.id", "=", export["create_uid"]),
+            ]
+        )
+        _logger.info(
+            "Found %s existing exports with name '%s' and resource '%s'",
+            len(existing_exports),
+            export["name"],
+            export["resource"],
+        )
         existing_exports.unlink()
         _logger.info("Creating export '%s' on model '%s'", export["name"], export["resource"])
         export_owner = self.env["res.users"].browse(export.pop("create_uid"))

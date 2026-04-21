@@ -3,7 +3,9 @@ from unittest.mock import MagicMock, patch
 from odoo_instance_utils.addons import Addon, Addons
 
 
-def make_addon(name, is_installed=False, auto_install=False, git_repo="", python_deps=None, manifest=None):
+def make_addon(
+    name, is_installed=False, auto_install=False, git_repo="", python_deps=None, manifest=None
+):
     addon = Addon(name=name, path=f"/fake/{name}", git_repo=git_repo)
     addon.is_installed = is_installed
     addon.manifest = manifest or {
@@ -107,7 +109,9 @@ class TestAddonsPythonDependencies:
 class TestAddonsGenerateYaml:
     def test_generate_addons_yaml(self):
         sale = make_addon("sale", git_repo="https://github.com/OCA/sale-workflow.git")
-        account = make_addon("account", git_repo="https://github.com/OCA/account-financial-tools.git")
+        account = make_addon(
+            "account", git_repo="https://github.com/OCA/account-financial-tools.git"
+        )
         addons = make_addons(sale, account)
         content = addons.generate_addons_yaml()
         assert "sale-workflow" in content
@@ -126,7 +130,9 @@ class TestAddonsGenerateYaml:
         mock_head = MagicMock(stdout="abc1234\n")
         mock_branch = MagicMock(stdout="16.0\n")
         # git_head is evaluated before git_branch in the dict literal
-        with patch("odoo_instance_utils.addons.subprocess.run", side_effect=[mock_head, mock_branch]):
+        with patch(
+            "odoo_instance_utils.addons.subprocess.run", side_effect=[mock_head, mock_branch]
+        ):
             addons = make_addons(sale)
             content = addons.generate_repos_yaml()
         assert "sale-workflow" in content

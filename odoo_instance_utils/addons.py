@@ -37,9 +37,7 @@ class Addon:
     @path.setter
     def path(self, value):
         if self._path and self._path != value:
-            raise ConflictError(
-                f"An addon {self.name} already exists with a different path"
-            )
+            raise ConflictError(f"An addon {self.name} already exists with a different path")
         self._path = value
 
     @property
@@ -115,7 +113,6 @@ class Addon:
 
 
 class Addons:
-
     # Filters
     installed = None
     minimize_list = False
@@ -154,9 +151,7 @@ class Addons:
         return iter(self.addons)
 
     def __getitem__(self, addon_name):
-        return next(
-            (a for a in self.addons if a.name == addon_name), Addon(name=addon_name)
-        )
+        return next((a for a in self.addons if a.name == addon_name), Addon(name=addon_name))
 
     @property
     def addons(self):
@@ -174,8 +169,10 @@ class Addons:
         if self.minimize_list:
             # Keep only addons not already covered as a dependency of another included addon
             addons = [
-                a for a in self._addons
-                if a.is_installed and not any(
+                a
+                for a in self._addons
+                if a.is_installed
+                and not any(
                     a.name in [d.name for d in other.dependencies]
                     for other in self._addons
                     if other.is_installed
@@ -209,9 +206,7 @@ class Addons:
 
                 for item in os.listdir(addons_path):
                     item_path = os.path.join(addons_path, item)
-                    if os.path.isdir(item_path) and "__manifest__.py" in os.listdir(
-                        item_path
-                    ):
+                    if os.path.isdir(item_path) and "__manifest__.py" in os.listdir(item_path):
                         addon = Addon(name=item, path=item_path, git_repo=git_repo)
                         with open(os.path.join(item_path, "__manifest__.py"), "r") as f:
                             addon.manifest = literal_eval(f.read())
@@ -236,9 +231,7 @@ class Addons:
         dependencies = []
         for dep in self.python_dependencies:
             try:
-                dependencies.append(
-                    f"{dep}=={importlib_metadata.version(dep).split('+')[0]}"
-                )
+                dependencies.append(f"{dep}=={importlib_metadata.version(dep).split('+')[0]}")
             except importlib_metadata.PackageNotFoundError:
                 dependencies.append(dep)
         return "\n".join(dependencies)
@@ -247,11 +240,7 @@ class Addons:
         """Generate the content of the repos.yaml file for the addons part"""
         repos = {}
         for repo_name, infos in self.build_sources_list().items():
-            target = (
-                infos["remote"] + " " + infos["branch"]
-                if infos["branch"]
-                else infos["head"]
-            )
+            target = infos["remote"] + " " + infos["branch"] if infos["branch"] else infos["head"]
             repos[repo_name] = {
                 "defaults": {"depth": 1},
                 "remotes": {infos["remote"]: infos["repo"]},
@@ -273,6 +262,4 @@ class Addons:
         return yaml.dump(addons_dict, default_flow_style=False)
 
     def generate_modules_csv_content_for_oow(self):
-        return "\n".join(
-            f"{addon.name},{addon.manifest.get('name', '')}" for addon in self.addons
-        )
+        return "\n".join(f"{addon.name},{addon.manifest.get('name', '')}" for addon in self.addons)

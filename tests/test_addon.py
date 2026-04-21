@@ -80,7 +80,9 @@ class TestAddonProperties:
         addon = make_addon(git_repo="https://github.com/OCA/sale-workflow.git")
         mock_result = MagicMock()
         mock_result.stdout = "abc1234\n"
-        with patch("odoo_instance_utils.addons.subprocess.run", return_value=mock_result) as mock_run:
+        with patch(
+            "odoo_instance_utils.addons.subprocess.run", return_value=mock_result
+        ) as mock_run:
             assert addon.git_head == "abc1234"
             mock_run.assert_called_once_with(
                 ["git", "rev-parse", "HEAD"],

@@ -11,6 +11,7 @@ def view_group():
     """Odoo view utilities."""
     pass
 
+
 @view_group.command("export")
 @click.argument("xmlid")
 @click.pass_context
@@ -23,6 +24,7 @@ def export_view(ctx, xmlid):
         sys.exit(1)
     click.echo(json.dumps(view_data, indent=2))
     sys.exit(0)
+
 
 @view_group.command("diff")
 @click.option("--verbose", is_flag=True, help="Print detailed diff output")

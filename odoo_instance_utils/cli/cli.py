@@ -21,6 +21,7 @@ def main(ctx, **kwargs):
     ctx.obj["odoo_env"] = kwargs["env"]
     ctx.obj["installed_addons_only"] = kwargs["installed_addons_only"]
 
+
 main.add_command(addons_group)
 main.add_command(filters_group)
 main.add_command(exports_group)
