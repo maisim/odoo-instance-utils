@@ -51,19 +51,20 @@ release:
     - git config user.name "GitLab CI"
     - git remote set-url origin "https://gitlab-ci-token:${GL_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   script:
-    # Check if conventional commits since last tag warrant a version bump
+    # Bump version if conventional commits warrant it
     - NEW_VERSION=$(uv run semantic-release version --print 2>/dev/null || true)
     - |
       if [ -n "$NEW_VERSION" ]; then
         echo "Releasing version $NEW_VERSION"
         uv run semantic-release version --push
-        uv build
-        uv publish \
-          --publish-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" \
-          --username gitlab-ci-token \
-          --password "${CI_JOB_TOKEN}"
       else
-        echo "No version bump warranted, skipping release."
+        echo "No version bump warranted, publishing current version."
       fi
+    # Always build and publish to GitLab PyPI registry
+    - uv build
+    - uv publish \
+        --publish-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" \
+        --username gitlab-ci-token \
+        --password "${CI_JOB_TOKEN}"
   rules:
     - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /\[skip ci\]/
