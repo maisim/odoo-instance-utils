@@ -1,6 +1,3 @@
-default:
-  image: python:3.12
-
 stages:
   - quality
   - test
@@ -11,7 +8,8 @@ variables:
 
 .install: &install
   before_script:
-    - pip install uv --quiet
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
     - uv sync --group dev
   cache:
     key: uv-$CI_COMMIT_REF_SLUG
@@ -48,7 +46,8 @@ test:
 release:
   stage: release
   before_script:
-    - pip install uv --quiet
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
     - uv sync --group dev
     - git config user.email "gitlab-ci@${CI_SERVER_HOST}"
     - git config user.name "GitLab CI"
