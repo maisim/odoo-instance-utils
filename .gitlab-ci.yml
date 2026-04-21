@@ -65,9 +65,6 @@ release:
       fi
     # Always build and publish to GitLab PyPI registry
     - uv build
-    - uv publish dist/* \
-        --publish-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" \
-        --username gitlab-ci-token \
-        --password "${CI_JOB_TOKEN}"
+    - uv publish dist/*
   rules:
     - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /\[skip ci\]/
