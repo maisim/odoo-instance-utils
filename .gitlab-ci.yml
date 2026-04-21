@@ -1,0 +1,64 @@
+stages:
+  - quality
+  - test
+  - release
+
+variables:
+  UV_CACHE_DIR: .uv-cache
+  UV_LINK_MODE: copy
+
+.install: &install
+  before_script:
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+    - uv sync --group dev
+  cache:
+    key: uv-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+
+.on-mr-and-main:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH == "main"
+
+lint:
+  extends: .on-mr-and-main
+  stage: quality
+  <<: *install
+  script:
+    - uv run pre-commit run --all-files
+
+test:
+  extends: .on-mr-and-main
+  stage: test
+  <<: *install
+  script:
+    - uv run pytest tests/ -v
+
+release:
+  stage: release
+  before_script:
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+    - uv sync --group dev
+    - git config user.email "gitlab-ci@${CI_SERVER_HOST}"
+    - git config user.name "GitLab CI"
+    - git remote set-url origin "https://gitlab-ci-token:${GL_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+  script:
+    # Check if conventional commits since last tag warrant a version bump
+    - NEW_VERSION=$(uv run semantic-release version --print 2>/dev/null)
+    - |
+      if [ -n "$NEW_VERSION" ]; then
+        echo "Releasing version $NEW_VERSION"
+        uv run semantic-release version --push
+        uv build
+        uv publish \
+          --publish-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" \
+          --username gitlab-ci-token \
+          --password "${CI_JOB_TOKEN}"
+      else
+        echo "No version bump warranted, skipping release."
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /\[skip ci\]/

@@ -1,13 +1,16 @@
 import json
-import click
-import click_odoo
 import sys
-from odoo_instance_utils.views import export, diff 
+
+import click
+
+from odoo_instance_utils.views import diff, export
+
 
 @click.group("view")
 def view_group():
     """Odoo view utilities."""
     pass
+
 
 @view_group.command("export")
 @click.argument("xmlid")
@@ -21,6 +24,7 @@ def export_view(ctx, xmlid):
         sys.exit(1)
     click.echo(json.dumps(view_data, indent=2))
     sys.exit(0)
+
 
 @view_group.command("diff")
 @click.option("--verbose", is_flag=True, help="Print detailed diff output")

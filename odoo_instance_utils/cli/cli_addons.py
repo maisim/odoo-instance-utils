@@ -1,10 +1,13 @@
 import click
+
 from odoo_instance_utils import OdooInstance
+
 
 @click.group("addons")
 def addons_group():
     """Addon management commands."""
     pass
+
 
 @addons_group.command("install")
 @click.argument("addons_names", required=True, type=str)
@@ -17,6 +20,7 @@ def addons_install(ctx, addons_names):
     installed_addons_names = instance.install_addons(addons_names)
     click.echo(f"Installed addons: {', '.join(installed_addons_names)}")
 
+
 @addons_group.command("list")
 @click.option(
     "--minimize-list",
@@ -24,17 +28,26 @@ def addons_install(ctx, addons_names):
     default=False,
     help="Minimize the list of addons (to install) with the game of dependencies",
 )
+@click.option(
+    "--needs-upgrade",
+    is_flag=True,
+    default=False,
+    help="Only show addons that need an upgrade",
+)
 @click.option("--format", type=click.Choice(["flat", "json", "csv"]), default="flat")
 @click.pass_context
-def list_addons(ctx, minimize_list, format):
+def list_addons(ctx, minimize_list, needs_upgrade, format):
     """List addons and their status."""
     env = ctx.obj["odoo_env"]
     odoo_instance = OdooInstance(env=env)
     addons = odoo_instance.addons(
-        installed=ctx.obj["installed_addons_only"], minimize_list=minimize_list
+        installed=ctx.obj["installed_addons_only"],
+        minimize_list=minimize_list,
+        needs_upgrade=True if needs_upgrade else None,
     )
     if format == "json":
         import json
+
         click.echo(json.dumps(list(addons.to_dict())))
         return
     elif format == "csv":
@@ -42,6 +55,7 @@ def list_addons(ctx, minimize_list, format):
             click.echo(f"{addon.name},{addon.manifest.get('name', '')}")
     else:
         click.echo(",".join(addon.name for addon in addons))
+
 
 @addons_group.command("why")
 @click.argument("addon_name", required=True, type=str)
@@ -55,6 +69,7 @@ def addon_why(ctx, addon_name):
     addons_that_depend_on = ", ".join([a.name for a in addon.is_dependency_of])
     click.echo(f"Addons that depend on {addon_name}: {addons_that_depend_on}")
 
+
 @addons_group.command("python-dependencies")
 @click.pass_context
 def addons_python_dependencies(ctx):
@@ -63,6 +78,7 @@ def addons_python_dependencies(ctx):
     odoo_instance = OdooInstance(env=env)
     addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
     click.echo(", ".join(addons.python_dependencies))
+
 
 @addons_group.command("generate-addons-yaml")
 @click.option(
@@ -87,6 +103,7 @@ def generate_addons_yaml(ctx, output=None):
     with open(output, "w") as file:
         file.write(addons_yaml_content)
     click.echo(f"Addons YAML file generated at {output}")
+
 
 @addons_group.command("generate-repos-yaml")
 @click.option(

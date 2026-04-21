@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "odoo-instance-utils"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = [
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+cli = [
+    "click",
+    "click-odoo",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pre-commit",
+    "ruff",
+    "mypy",
+    "types-pyyaml",
+    "python-semantic-release",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = ["tests/fixtures/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+branch = "main"
+commit_version_number = true
+tag_commit = true
+major_on_zero = false
+commit_message = "chore: release {version} [skip ci]"
+
+[tool.semantic_release.remote]
+type = "gitlab"
+token = { env = "GL_TOKEN" }
+
+[project.scripts]
+odoo-instance = "odoo_instance_utils.cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["odoo_instance_utils*"]

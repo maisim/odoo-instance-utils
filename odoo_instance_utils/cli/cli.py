@@ -2,8 +2,8 @@ import click
 import click_odoo
 
 from .cli_addons import addons_group
-from .cli_filters import filters_group
 from .cli_exports import exports_group
+from .cli_filters import filters_group
 from .cli_view import view_group
 
 
@@ -20,6 +20,7 @@ def main(ctx, **kwargs):
     ctx.ensure_object(dict)
     ctx.obj["odoo_env"] = kwargs["env"]
     ctx.obj["installed_addons_only"] = kwargs["installed_addons_only"]
+
 
 main.add_command(addons_group)
 main.add_command(filters_group)
