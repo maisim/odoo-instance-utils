@@ -153,7 +153,11 @@ class Addons:
         return iter(self.addons)
 
     def __getitem__(self, addon_name):
-        return next((a for a in self.addons if a.name == addon_name), Addon(name=addon_name))
+        addon = next((a for a in self._addons if a.name == addon_name), None)
+        if addon is None:
+            addon = Addon(name=addon_name)
+            self._addons.append(addon)
+        return addon
 
     @property
     def addons(self):
