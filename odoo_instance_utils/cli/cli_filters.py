@@ -9,6 +9,16 @@ def filters_group():
     pass
 
 
+@filters_group.command("list")
+@click.pass_context
+def list_filters(ctx):
+    """List all filters with their id, name and model."""
+    env = ctx.obj["odoo_env"]
+    instance = OdooInstance(env=env)
+    for f in instance.list_filters():
+        click.echo(f"{f['id']}\t{f['model_id']}\t{f['name']}")
+
+
 @filters_group.command("dump")
 @click.argument("ids", required=True, type=str)
 @click.pass_context

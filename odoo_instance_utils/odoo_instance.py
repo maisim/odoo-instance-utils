@@ -58,6 +58,11 @@ class OdooInstance:
         addons_to_install.button_immediate_install()
         return addons_to_install.mapped("name")
 
+    def list_filters(self) -> list:
+        """Return all filters as a list of dicts with id, name and model_id."""
+        filters = self.env["ir.filters"].search([])
+        return filters.read(fields=["id", "name", "model_id"], load=None)
+
     def dump_filters(self, ids: List[int]) -> str:
         """Export filters as JSON."""
         ids = [int(i) for i in ids]
