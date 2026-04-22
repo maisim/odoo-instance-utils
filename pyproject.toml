@@ -5,10 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "odoo-instance-utils"
 version = "0.1.0"
+description = "CLI utilities for auditing and managing Odoo instances"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Simon Maillard", email = "simon@ogesta.fr" }]
 requires-python = ">=3.8"
 dependencies = [
     "pyyaml",
 ]
+
+[project.urls]
+homepage = "https://gitlab.ogesta.fr/simon/odoo-instance-utils"
+repository = "https://gitlab.ogesta.fr/simon/odoo-instance-utils"
 
 [project.optional-dependencies]
 cli = [
