@@ -113,16 +113,78 @@ def generate_addons_yaml(ctx, output=None):
     required=False,
     help="Output file for repos.yml",
 )
+@click.option(
+    "--use-head",
+    is_flag=True,
+    default=False,
+    help="Pin repos to current HEAD commit instead of branch name",
+)
 @click.pass_context
-def generate_repos_yaml(ctx, output=None):
+def generate_repos_yaml(ctx, output=None, use_head=False):
     """Generate repos.yml file for git-aggregator."""
     env = ctx.obj["odoo_env"]
     odoo_instance = OdooInstance(env=env)
     addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
-    repos_yaml_content = addons.generate_repos_yaml()
+    repos_yaml_content = addons.generate_repos_yaml(use_head=use_head)
     if not output:
         click.echo(repos_yaml_content)
         return
     with open(output, "w") as file:
         file.write(repos_yaml_content)
     click.echo(f"Repos YAML file generated at {output}")
+
+
+@addons_group.command("audit")
+@click.pass_context
+def audit_addons(ctx):
+    """Audit installed addons: version mismatches, missing from filesystem, pending upgrades."""
+    env = ctx.obj["odoo_env"]
+    odoo_instance = OdooInstance(env=env)
+    # All addons: installed in DB + present on filesystem
+    all_addons = odoo_instance.addons(installed=None)
+
+    # Column widths
+    col = {"name": 35, "state": 12, "fs_ver": 18, "db_ver": 18, "repo": 28, "ref": 12}
+    header = (
+        f"{'ADDON':<{col['name']}}  "
+        f"{'STATE':<{col['state']}}  "
+        f"{'FS VERSION':<{col['fs_ver']}}  "
+        f"{'DB VERSION':<{col['db_ver']}}  "
+        f"{'REPO':<{col['repo']}}  "
+        f"REF"
+    )
+    click.echo(header)
+    click.echo("-" * (sum(col.values()) + len(col) * 2))
+
+    for addon in sorted(all_addons, key=lambda a: a.name):
+        if not addon.db_state and not addon.is_installed:
+            continue  # filesystem-only, never touched by Odoo
+
+        fs_ver = addon.version or ("(missing)" if not addon.path else "(no version)")
+        db_ver = addon.db_version or "-"
+        state = addon.db_state or "fs-only"
+        repo = addon.repo_name or "-"
+        ref = (
+            (addon.git_branch or addon.git_head[:8] if addon.git_head else "-")
+            if addon.git_repo
+            else "-"
+        )
+
+        # Highlight mismatches
+        flag = ""
+        if addon.needs_upgrade:
+            flag = " !"
+        elif fs_ver and db_ver and fs_ver != "-" and db_ver != "-" and fs_ver != db_ver:
+            flag = " ~"  # version differs between fs and db
+        elif not addon.path and addon.is_installed:
+            flag = " ?"  # installed in DB but missing from filesystem
+
+        line = (
+            f"{addon.name:<{col['name']}}  "
+            f"{state:<{col['state']}}  "
+            f"{fs_ver:<{col['fs_ver']}}  "
+            f"{db_ver:<{col['db_ver']}}  "
+            f"{repo:<{col['repo']}}  "
+            f"{ref}{flag}"
+        )
+        click.echo(line)

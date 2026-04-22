@@ -7,7 +7,7 @@ from ast import literal_eval
 
 import yaml
 
-from .exceptions import ConflictError, IntegrityError
+from .exceptions import ConflictError
 
 if sys.version_info < (3, 8):
     import importlib_metadata
@@ -25,6 +25,8 @@ class Addon:
         self.needs_upgrade = False
         self.is_dependency_of = []
         self.manifest = {}
+        self.db_version: str = ""  # installed_version from ir.module.module
+        self.db_state: str = ""  # state from ir.module.module
 
     def __str__(self) -> str:
         return self.name
@@ -59,7 +61,8 @@ class Addon:
         return ""
 
     @property
-    def git_branch(self):
+    def git_branch(self) -> str | None:
+        """Current branch name, or None if detached HEAD or no git repo."""
         if self.git_repo:
             result = subprocess.run(
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
@@ -69,11 +72,9 @@ class Addon:
             )
             branch = result.stdout.strip()
             if branch == "HEAD":
-                raise IntegrityError(
-                    f"Repo {self.repo_name} is in detached HEAD state ({self._path})"
-                )
+                return None  # detached HEAD
             return branch
-        return ""
+        return None
 
     @property
     def remote(self):
@@ -107,10 +108,13 @@ class Addon:
             "is_dependency_of": [a.name for a in self.is_dependency_of],
             "repo_name": self.repo_name,
             "git_head": self.git_head,
+            "git_branch": self.git_branch,
             "remote": self.remote,
             "version": self.version,
             "target_version": self.target_version,
             "auto_install": self.auto_install,
+            "db_version": self.db_version,
+            "db_state": self.db_state,
         }
 
 
@@ -201,14 +205,19 @@ class Addons:
         for addons_path in self.addons_paths.split(","):
             if os.path.isdir(addons_path):
                 git_repo = ""
-                if os.path.isdir(os.path.join(addons_path, ".git")):
-                    result = subprocess.run(
-                        ["git", "config", "--get", "remote.origin.url"],
-                        cwd=addons_path,
-                        capture_output=True,
-                        text=True,
-                    )
-                    git_repo = result.stdout.strip()
+                # Walk up the directory tree to find the git root
+                search_dir = addons_path
+                while search_dir != os.path.dirname(search_dir):
+                    if os.path.isdir(os.path.join(search_dir, ".git")):
+                        result = subprocess.run(
+                            ["git", "config", "--get", "remote.origin.url"],
+                            cwd=search_dir,
+                            capture_output=True,
+                            text=True,
+                        )
+                        git_repo = result.stdout.strip()
+                        break
+                    search_dir = os.path.dirname(search_dir)
 
                 for item in os.listdir(addons_path):
                     item_path = os.path.join(addons_path, item)
@@ -224,12 +233,12 @@ class Addons:
     def build_sources_list(self):
         sources = {}
         for addon in self.addons:
-            if addon.git_repo:
+            if addon.git_repo and addon.repo_name not in sources:
                 sources[addon.repo_name] = {
                     "repo": addon.git_repo,
                     "remote": addon.remote,
                     "head": addon.git_head,
-                    "branch": addon.git_branch,
+                    "branch": addon.git_branch,  # None if detached HEAD
                 }
         return sources
 
@@ -242,11 +251,17 @@ class Addons:
                 dependencies.append(dep)
         return "\n".join(dependencies)
 
-    def generate_repos_yaml(self):
-        """Generate the content of the repos.yaml file for the addons part"""
+    def generate_repos_yaml(self, use_head: bool = False) -> str:
+        """Generate the content of the repos.yaml file for the addons part.
+
+        use_head: pin to current HEAD commit instead of branch name.
+        """
         repos = {}
         for repo_name, infos in self.build_sources_list().items():
-            target = infos["remote"] + " " + infos["branch"] if infos["branch"] else infos["head"]
+            if use_head or not infos["branch"]:
+                target = infos["head"] or ""
+            else:
+                target = infos["remote"] + " " + infos["branch"]
             repos[repo_name] = {
                 "defaults": {"depth": 1},
                 "remotes": {infos["remote"]: infos["repo"]},

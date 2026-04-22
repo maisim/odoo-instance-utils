@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from odoo_instance_utils.addons import Addon
-from odoo_instance_utils.exceptions import ConflictError, IntegrityError
+from odoo_instance_utils.exceptions import ConflictError
 
 
 def make_addon(name="sale", git_repo="", manifest=None):
@@ -74,7 +74,7 @@ class TestAddonProperties:
         assert make_addon().git_head == ""
 
     def test_git_branch_no_repo(self):
-        assert make_addon().git_branch == ""
+        assert make_addon().git_branch is None
 
     def test_git_head_calls_subprocess(self):
         addon = make_addon(git_repo="https://github.com/OCA/sale-workflow.git")
@@ -91,13 +91,12 @@ class TestAddonProperties:
                 text=True,
             )
 
-    def test_git_branch_detached_raises(self):
+    def test_git_branch_detached_returns_none(self):
         addon = make_addon(git_repo="https://github.com/OCA/sale-workflow.git")
         mock_result = MagicMock()
         mock_result.stdout = "HEAD\n"
         with patch("odoo_instance_utils.addons.subprocess.run", return_value=mock_result):
-            with pytest.raises(IntegrityError):
-                _ = addon.git_branch
+            assert addon.git_branch is None
 
     def test_git_branch_calls_subprocess(self):
         addon = make_addon(git_repo="https://github.com/OCA/sale-workflow.git")
