@@ -3,7 +3,7 @@ image: python:3.12
 stages:
   - quality
   - test
-  - release
+  - publish
 
 variables:
   UV_CACHE_DIR: .uv-cache
@@ -42,29 +42,15 @@ test:
   script:
     - uv run pytest tests/ -v
 
-release:
-  stage: release
+publish:
+  stage: publish
   tags: [docker]
-  variables:
-    GIT_DEPTH: 0
   before_script:
     - pip install uv
-    - uv sync --group dev
-    - git config user.email "gitlab-ci@${CI_SERVER_HOST}"
-    - git config user.name "GitLab CI"
-    - git remote set-url origin "https://gitlab-ci-token:${GL_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
   script:
-    # Bump version if conventional commits warrant it
-    - NEW_VERSION=$(uv run semantic-release version --print 2>/dev/null || true)
-    - |
-      if [ -n "$NEW_VERSION" ]; then
-        echo "Releasing version $NEW_VERSION"
-        uv run semantic-release version --push
-      else
-        echo "No version bump warranted, publishing current version."
-      fi
-    # Always build and publish to GitLab PyPI registry
+    - VERSION=$(git describe --exact-match --tags)
+    - uvx --from=toml-cli toml set --toml-path=pyproject.toml project.version $VERSION
     - uv build
     - uv publish dist/*
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /\[skip ci\]/
+    - if: $CI_COMMIT_TAG

@@ -23,7 +23,6 @@ dev = [
     "ruff",
     "mypy",
     "types-pyyaml",
-    "python-semantic-release",
 ]
 
 [tool.ruff]
@@ -40,19 +39,6 @@ exclude = ["tests/fixtures/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
-[tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-branch = "main"
-commit_version_number = true
-tag_commit = true
-major_on_zero = false
-allow_zero_version = true
-commit_message = "chore: release {version} [skip ci]"
-
-[tool.semantic_release.remote]
-type = "gitlab"
-token = { env = "GL_TOKEN" }
 
 [project.scripts]
 odoo-instance = "odoo_instance_utils.cli.cli:main"
