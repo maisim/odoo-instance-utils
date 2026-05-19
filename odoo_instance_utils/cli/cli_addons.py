@@ -10,9 +10,17 @@ from odoo_instance_utils.spec import AddonSpec
 from odoo_instance_utils.spec_loader import SpecLoadError, load_spec
 
 if TYPE_CHECKING:
-    from odoo_instance_utils.odoo_instance import OdooInstance
-else:
-    from odoo_instance_utils import OdooInstance  # pragma: no cover — runtime path
+    pass
+
+
+def _require_odoo(ctx: click.Context) -> None:
+    """Raise :class:`click.UsageError` if the Odoo env is unavailable."""
+    if "odoo_env" not in ctx.obj:
+        raise click.UsageError(
+            "This command requires an Odoo environment. "
+            "Run inside an Odoo shell with the --env flag.",
+            ctx,
+        )
 
 
 @click.group("addons")
@@ -50,14 +58,12 @@ def addons_lint(filepath):
 )
 @click.pass_context
 def addons_capture(ctx, output):
-    """Generate a foundry_addons.py file from the live instance.
+    """Generate a foundry_addons.py file from the live instance."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
 
-    Scans all addon paths, groups modules by git remote, pins each repo
-    to its current HEAD, and writes a Python module exporting
-    ``addon_spec``.
-    """
     env = ctx.obj["odoo_env"]
-    instance = OdooInstance(env=env)
+    instance = OdooInstance(env=env)  # type: ignore[operator]
     spec = AddonSpec.from_instance(instance)
 
     lines: list[str] = [
@@ -95,12 +101,12 @@ def addons_capture(ctx, output):
 )
 @click.pass_context
 def addons_verify(ctx, filepath):
-    """Compare foundry_addons.py against the live instance.
+    """Compare foundry_addons.py against the live instance."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
 
-    Exits with non-zero status if discrepancies are found.
-    """
     env = ctx.obj["odoo_env"]
-    instance = OdooInstance(env=env)
+    instance = OdooInstance(env=env)  # type: ignore[operator]
 
     try:
         spec = load_spec(filepath)
@@ -124,9 +130,12 @@ def addons_verify(ctx, filepath):
 @click.pass_context
 def addons_install(ctx, addons_names):
     """Install addons, separated by comma."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
     env = ctx.obj["odoo_env"]
     addons_names = [addon_name.strip() for addon_name in addons_names.split(",")]
-    instance = OdooInstance(env=env)
+    instance = OdooInstance(env=env)  # type: ignore[operator]
     installed_addons_names = instance.install_addons(addons_names)
     click.echo(f"Installed addons: {', '.join(installed_addons_names)}")
 
@@ -148,8 +157,11 @@ def addons_install(ctx, addons_names):
 @click.pass_context
 def list_addons(ctx, minimize_list, needs_upgrade, format):
     """List addons and their status."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
     env = ctx.obj["odoo_env"]
-    odoo_instance = OdooInstance(env=env)
+    odoo_instance = OdooInstance(env=env)  # type: ignore[operator]
     addons = odoo_instance.addons(
         installed=ctx.obj["installed_addons_only"],
         minimize_list=minimize_list,
@@ -172,8 +184,11 @@ def list_addons(ctx, minimize_list, needs_upgrade, format):
 @click.pass_context
 def addon_why(ctx, addon_name):
     """List modules that depend on the given module."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
     env = ctx.obj["odoo_env"]
-    odoo_instance = OdooInstance(env=env)
+    odoo_instance = OdooInstance(env=env)  # type: ignore[operator]
     addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
     addon = addons[addon_name]
     addons_that_depend_on = ", ".join([a.name for a in addon.is_dependency_of])
@@ -184,8 +199,11 @@ def addon_why(ctx, addon_name):
 @click.pass_context
 def addons_python_dependencies(ctx):
     """List python dependencies for the instance addons."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
     env = ctx.obj["odoo_env"]
-    odoo_instance = OdooInstance(env=env)
+    odoo_instance = OdooInstance(env=env)  # type: ignore[operator]
     addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
     click.echo(", ".join(addons.python_dependencies))
 
@@ -201,8 +219,11 @@ def addons_python_dependencies(ctx):
 @click.pass_context
 def generate_addons_yaml(ctx, output=None):
     """Generate an addons.yml file for Doodba."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
     env = ctx.obj["odoo_env"]
-    odoo_instance = OdooInstance(env=env)
+    odoo_instance = OdooInstance(env=env)  # type: ignore[operator]
     addons = odoo_instance.addons(
         installed=ctx.obj["installed_addons_only"], include_auto_installed_addons=False
     )
@@ -232,8 +253,11 @@ def generate_addons_yaml(ctx, output=None):
 @click.pass_context
 def generate_repos_yaml(ctx, output=None, use_head=False):
     """Generate repos.yml file for git-aggregator."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
     env = ctx.obj["odoo_env"]
-    odoo_instance = OdooInstance(env=env)
+    odoo_instance = OdooInstance(env=env)  # type: ignore[operator]
     addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
     repos_yaml_content = addons.generate_repos_yaml(use_head=use_head)
     if not output:
@@ -248,8 +272,11 @@ def generate_repos_yaml(ctx, output=None, use_head=False):
 @click.pass_context
 def audit_addons(ctx):
     """Audit installed addons: version mismatches, missing from filesystem, pending upgrades."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
     env = ctx.obj["odoo_env"]
-    odoo_instance = OdooInstance(env=env)
+    odoo_instance = OdooInstance(env=env)  # type: ignore[operator]
     # All addons: installed in DB + present on filesystem
     all_addons = odoo_instance.addons(installed=None)
 
