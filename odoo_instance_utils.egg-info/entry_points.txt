@@ -1,2 +1,0 @@
-[console_scripts]
-odoo-instance = odoo_instance_utils.cli.cli:main

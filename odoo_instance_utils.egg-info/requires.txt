@@ -1,5 +1,0 @@
-pyyaml
-
-[cli]
-click
-click-odoo
