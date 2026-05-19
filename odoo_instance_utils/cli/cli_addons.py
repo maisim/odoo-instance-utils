@@ -13,6 +13,23 @@ if TYPE_CHECKING:
     pass
 
 
+def _spec_to_json(spec: AddonSpec) -> dict:
+    """Serialize *spec* to the JSON format expected by :meth:`AddonSpec.from_json`."""
+    repos = {}
+    for r in spec.repos:
+        repos[r.name] = {
+            "url": r.url,
+            "remote": r.remote,
+            "branch": r.target.split()[-1] if " " in r.target else "",
+            "head": r.target if " " not in r.target else "",
+        }
+    addons = {}
+    for s in spec.selections:
+        for mod in s.modules:
+            addons[mod] = {"repo": s.repo, "version": ""}
+    return {"repos": repos, "addons": addons}
+
+
 def _require_odoo(ctx: click.Context) -> None:
     """Raise :class:`click.UsageError` if the Odoo env is unavailable."""
     if "odoo_env" not in ctx.obj:
@@ -48,24 +65,8 @@ def addons_lint(filepath):
     click.echo(f"  selections = {len(spec.selections)}")
 
 
-@addons_group.command("capture")
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(),
-    default="foundry_addons.py",
-    help="Output file path (default: foundry_addons.py)",
-)
-@click.pass_context
-def addons_capture(ctx, output):
-    """Generate a foundry_addons.py file from the live instance."""
-    _require_odoo(ctx)
-    from odoo_instance_utils import OdooInstance
-
-    env = ctx.obj["odoo_env"]
-    instance = OdooInstance(env=env)  # type: ignore[operator]
-    spec = AddonSpec.from_instance(instance)
-
+def _write_spec(spec: AddonSpec, output: str) -> None:
+    """Serialize *spec* as ``foundry_addons.py`` and write to *output*."""
     lines: list[str] = [
         '"""Addon specification captured from live instance."""',
         "",
@@ -88,6 +89,74 @@ def addons_capture(ctx, output):
     Path(output).write_text(content)
     click.echo(f"foundry_addons.py written to {output}")
     click.echo(f"  {len(spec.repos)} repos, {sum(len(s.modules) for s in spec.selections)} modules")
+
+
+def _capture_remote(host: str, odoo_config: str, db: str | None) -> AddonSpec:
+    """Run the ``OdooAddons`` fact on a remote host via pyinfra and return the spec.
+
+    *host* is a pyinfra host string: ``user@host`` (default @ssh connector),
+    ``@connector/user@host:port``, ``@dockerssh/container``, etc.
+    """
+    try:
+        from pyinfra.api import Config, Inventory, State
+        from pyinfra_odoo.facts import OdooAddons
+    except ImportError as exc:
+        raise click.UsageError(
+            f"Remote capture requires pyinfra and pyinfra-odoo: {exc}",
+        ) from exc
+
+    # Prepend @ssh/ if no connector prefix
+    if not host.startswith("@"):
+        host = f"@ssh/{host}"
+
+    inventory = Inventory(([host], {}))
+    config = Config()
+    state = State(inventory=inventory, config=config)
+
+    remote_host = list(inventory.hosts.values())[0]
+    state.activate_host(remote_host)
+    remote_host.connect(reason="capture addon spec")
+    result = remote_host.get_fact(OdooAddons, odoo_config=odoo_config, db=db)
+    return AddonSpec.from_json(result)
+
+
+@addons_group.command("capture")
+@click.option("--host", default=None, help="Remote host (user@host, @connector:user@host)")
+@click.option("--odoo-config", default="/etc/odoo/odoo.conf", help="Path to odoo.conf on remote")
+@click.option("--db", default=None, help="Database name (optional)")
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["python", "json"]),
+    default="python",
+    help="Output format (default: python = foundry_addons.py)",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(),
+    default="foundry_addons.py",
+    help="Output file path (default: foundry_addons.py)",
+)
+@click.pass_context
+def addons_capture(ctx, host, odoo_config, db, fmt, output):
+    """Generate a foundry_addons.py file from a local or remote instance."""
+    if host:
+        spec = _capture_remote(host, odoo_config, db)
+    else:
+        _require_odoo(ctx)
+        from odoo_instance_utils import OdooInstance
+
+        env = ctx.obj["odoo_env"]
+        instance = OdooInstance(env=env)  # type: ignore[operator]
+        spec = AddonSpec.from_instance(instance)
+
+    if fmt == "json":
+        import json
+
+        click.echo(json.dumps(_spec_to_json(spec)))
+    else:
+        _write_spec(spec, output)
 
 
 @addons_group.command("verify")

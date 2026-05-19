@@ -196,3 +196,48 @@ class AddonSpec:
                     addon.repo_ref = next((r for r in self.repos if r.name == repo_name), None)
 
         return issues
+
+    @classmethod
+    def from_json(cls, data: dict) -> AddonSpec:
+        """Build an ``AddonSpec`` from the JSON output of the ``OdooAddons`` fact.
+
+        The *data* dict has the shape::
+
+            {
+              "repos": {
+                "server-tools": {"url": "...", "remote": "oca",
+                                 "branch": "17.0", "head": "abc123..."}
+              },
+              "addons": {
+                "auditlog": {"repo": "server-tools", "version": "17.0.1.0.0"}
+              }
+            }
+        """
+        repos_list: list[AddonRepo] = []
+        for name, info in data.get("repos", {}).items():
+            target = info.get("head", "") or (
+                f"{info['remote']} {info['branch']}"
+                if info.get("remote") and info.get("branch")
+                else ""
+            )
+            repos_list.append(
+                AddonRepo(
+                    name=name,
+                    url=info.get("url", ""),
+                    remote=info.get("remote", ""),
+                    target=target,
+                )
+            )
+
+        by_repo: dict[str, list[str]] = {}
+        for mod_name, mod_info in data.get("addons", {}).items():
+            repo = mod_info.get("repo", "")
+            if repo:
+                by_repo.setdefault(repo, []).append(mod_name)
+
+        selections = [
+            AddonSelection(repo=name, modules=tuple(sorted(modules)))
+            for name, modules in by_repo.items()
+        ]
+
+        return cls(repos=tuple(repos_list), selections=tuple(selections))

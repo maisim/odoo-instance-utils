@@ -9,7 +9,7 @@ description = "CLI utilities for auditing and managing Odoo instances"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Simon Maillard", email = "simon@ogesta.fr" }]
-requires-python = ">=3.8"
+requires-python = ">=3.14"
 dependencies = [
     "pyyaml",
 ]
@@ -22,6 +22,9 @@ repository = "https://gitlab.ogesta.fr/simon/odoo-instance-utils"
 cli = [
     "click",
     "click-odoo",
+]
+remote = [
+    "pyinfra-odoo",
 ]
 
 [dependency-groups]
@@ -54,3 +57,6 @@ odoo-instance = "odoo_instance_utils.cli.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["odoo_instance_utils*"]
+
+[tool.uv.sources]
+pyinfra-odoo = { path = "../pyinfra-odoo", editable = true }
