@@ -1,12 +1,122 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import click
 
-from odoo_instance_utils import OdooInstance
+from odoo_instance_utils.spec import AddonSpec
+from odoo_instance_utils.spec_loader import SpecLoadError, load_spec
+
+if TYPE_CHECKING:
+    from odoo_instance_utils.odoo_instance import OdooInstance
+else:
+    from odoo_instance_utils import OdooInstance  # pragma: no cover — runtime path
 
 
 @click.group("addons")
 def addons_group():
     """Addon management commands."""
     pass
+
+
+@addons_group.command("lint")
+@click.argument("filepath", type=click.Path(exists=True), required=True)
+def addons_lint(filepath):
+    """Validate a foundry_addons.py file.
+
+    FILEPATH must be a Python module exporting an ``addon_spec``
+    of type ``AddonSpec``.
+    """
+    try:
+        spec = load_spec(filepath)
+    except SpecLoadError as exc:
+        click.echo(f"error: {exc}", err=True)
+        sys.exit(1)
+
+    click.echo(f"ok: {filepath} is valid")
+    click.echo(f"  repos     = {len(spec.repos)}")
+    click.echo(f"  selections = {len(spec.selections)}")
+
+
+@addons_group.command("capture")
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(),
+    default="foundry_addons.py",
+    help="Output file path (default: foundry_addons.py)",
+)
+@click.pass_context
+def addons_capture(ctx, output):
+    """Generate a foundry_addons.py file from the live instance.
+
+    Scans all addon paths, groups modules by git remote, pins each repo
+    to its current HEAD, and writes a Python module exporting
+    ``addon_spec``.
+    """
+    env = ctx.obj["odoo_env"]
+    instance = OdooInstance(env=env)
+    spec = AddonSpec.from_instance(instance)
+
+    lines: list[str] = [
+        '"""Addon specification captured from live instance."""',
+        "",
+        "from odoo_instance_utils.spec import AddonRepo, AddonSelection, AddonSpec",
+        "",
+        "addon_spec = AddonSpec(",
+        "    repos=(",
+    ]
+    for repo in spec.repos:
+        lines.append(f"        AddonRepo(name={repo.name!r}, url={repo.url!r},")
+        lines.append(f"                 remote={repo.remote!r}, target={repo.target!r}),")
+    lines.append("    ),")
+    lines.append("    selections=(")
+    for sel in spec.selections:
+        lines.append(f"        AddonSelection(repo={sel.repo!r}, modules={sel.modules!r}),")
+    lines.append("    ),")
+    lines.append(")")
+
+    content = "\n".join(lines) + "\n"
+    Path(output).write_text(content)
+    click.echo(f"foundry_addons.py written to {output}")
+    click.echo(f"  {len(spec.repos)} repos, {sum(len(s.modules) for s in spec.selections)} modules")
+
+
+@addons_group.command("verify")
+@click.option(
+    "-f",
+    "--file",
+    "filepath",
+    type=click.Path(exists=True),
+    default="foundry_addons.py",
+    help="Path to foundry_addons.py (default: ./foundry_addons.py)",
+)
+@click.pass_context
+def addons_verify(ctx, filepath):
+    """Compare foundry_addons.py against the live instance.
+
+    Exits with non-zero status if discrepancies are found.
+    """
+    env = ctx.obj["odoo_env"]
+    instance = OdooInstance(env=env)
+
+    try:
+        spec = load_spec(filepath)
+    except SpecLoadError as exc:
+        click.echo(f"error: {exc}", err=True)
+        sys.exit(1)
+
+    issues = spec.diff(instance)
+    if not issues:
+        click.echo(f"ok: {filepath} matches the live instance")
+        return
+
+    for issue in issues:
+        click.echo(f"  - {issue}")
+    click.echo(f"{len(issues)} discrepancy(ies) found")
+    sys.exit(1)
 
 
 @addons_group.command("install")

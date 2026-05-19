@@ -4,10 +4,15 @@ import os
 import subprocess
 import sys
 from ast import literal_eval
+from typing import TYPE_CHECKING
 
 import yaml
 
 from .exceptions import ConflictError
+from .hashing import fingerprint_module
+
+if TYPE_CHECKING:
+    from .spec import AddonRepo as AddonRepoType
 
 if sys.version_info < (3, 8):
     import importlib_metadata
@@ -27,6 +32,7 @@ class Addon:
         self.manifest = {}
         self.db_version: str = ""  # installed_version from ir.module.module
         self.db_state: str = ""  # state from ir.module.module
+        self.repo_ref: AddonRepoType | None = None  # link to declarative AddonRepo
 
     def __str__(self) -> str:
         return self.name
@@ -98,6 +104,11 @@ class Addon:
     def auto_install(self):
         return self.manifest.get("auto_install", False)
 
+    @property
+    def fingerprint(self) -> str:
+        """SHA256 hex digest of the module's source files, or ``""``."""
+        return fingerprint_module(self.path) if self._path else ""
+
     def to_dict(self):
         return {
             "name": self.name,
@@ -115,6 +126,7 @@ class Addon:
             "auto_install": self.auto_install,
             "db_version": self.db_version,
             "db_state": self.db_state,
+            "fingerprint": self.fingerprint,
         }
 
 
