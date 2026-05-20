@@ -15,8 +15,8 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://gitlab.ogesta.fr/simon/odoo-instance-utils"
-repository = "https://gitlab.ogesta.fr/simon/odoo-instance-utils"
+homepage = "https://github.com/maisim/odoo-instance-utils"
+repository = "https://github.com/maisim/odoo-instance-utils"
 
 [project.optional-dependencies]
 cli = [
