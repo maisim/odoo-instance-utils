@@ -1,14 +1,22 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.6
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-pyyaml]
-        exclude: ^tests/fixtures/
+- hooks:
+  - args:
+    - --fix
+    id: ruff
+  - id: ruff-format
+  repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.11.6
+- hooks:
+  - additional_dependencies:
+    - types-pyyaml
+    exclude: ^tests/fixtures/
+    id: mypy
+  repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.15.0
+- hooks:
+  - id: commitizen
+  - id: commitizen-branch
+    stages:
+    - pre-push
+  repo: https://github.com/commitizen-tools/commitizen
+  rev: v4.16.2

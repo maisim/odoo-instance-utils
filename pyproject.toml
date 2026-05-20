@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "odoo-instance-utils"
-version = "0.1.0"
+dynamic = ["version"]
 description = "CLI utilities for auditing and managing Odoo instances"
 readme = "README.md"
 license = "MIT"
@@ -23,6 +23,9 @@ cli = [
     "click",
     "click-odoo",
 ]
+
+[project.scripts]
+odoo-instance = "odoo_instance_utils.cli.cli:main"
 
 [dependency-groups]
 dev = [
@@ -48,10 +51,17 @@ exclude = ["tests/fixtures/"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
-[project.scripts]
-odoo-instance = "odoo_instance_utils.cli.cli:main"
 
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver2"
+version_provider = "scm"
+update_changelog_on_bump = true
+major_version_zero = true
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["odoo_instance_utils*"]
+
+[tool.setuptools_scm]
 
