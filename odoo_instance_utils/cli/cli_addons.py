@@ -64,6 +64,57 @@ def addons_lint(filepath):
     click.echo(f"  selections = {len(spec.selections)}")
 
 
+@addons_group.command("resolve")
+@click.argument("module_name", required=True)
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["json", "flat"]),
+    default="json",
+    help="Output format (default: json)",
+)
+@click.pass_context
+def addons_resolve(ctx, module_name, fmt):
+    """Resolve a module and its transitive dependencies."""
+    _require_odoo(ctx)
+    from odoo_instance_utils import OdooInstance
+
+    env = ctx.obj["odoo_env"]
+    instance = OdooInstance(env=env)  # type: ignore[operator]
+
+    addon = instance.addons[module_name]
+    deps = instance.addons.transitive_dependencies(module_name)
+
+    by_repo: dict[str, list[str]] = {}
+    missing: list[str] = []
+    for dep_name in sorted(deps):
+        dep = instance.addons[dep_name]
+        if dep.repo_name:
+            by_repo.setdefault(dep.repo_name, []).append(dep_name)
+        else:
+            missing.append(dep_name)
+
+    if fmt == "json":
+        import json
+
+        click.echo(
+            json.dumps(
+                {
+                    "module": module_name,
+                    "repo": addon.repo_name or None,
+                    "dependencies": sorted(deps),
+                    "by_repo": by_repo,
+                    "missing": missing,
+                }
+            )
+        )
+    else:
+        click.echo(f"{module_name} ({addon.repo_name or 'no repo'})")
+        for dep in sorted(deps):
+            dep_addon = instance.addons[dep]
+            click.echo(f"  {dep} ({dep_addon.repo_name or 'no repo'})")
+
+
 @addons_group.command("capture")
 @click.option(
     "--format",

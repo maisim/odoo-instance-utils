@@ -261,6 +261,25 @@ class Addons:
 
         return self._addons
 
+    def transitive_dependencies(self, module_name: str) -> set[str]:
+        """Return all module names reachable from *module_name* via ``dependencies``.
+
+        Uses breadth-first traversal through the dependency graph built by
+        ``fill_from_odoo_db``. The requested module itself is excluded from
+        the result.
+        """
+        result: set[str] = set()
+        queue = [module_name]
+        while queue:
+            name = queue.pop(0)
+            if name in result:
+                continue
+            result.add(name)
+            addon = self[name]
+            queue.extend(d.name for d in addon.dependencies)
+        result.discard(module_name)
+        return result
+
     @property
     def python_dependencies(self):
         dependencies = []
