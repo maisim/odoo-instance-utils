@@ -106,6 +106,33 @@ class TestAddonsPythonDependencies:
         assert addons.python_dependencies == []
 
 
+class TestAddonsDependenciesAggregation:
+    def test_aggregates_apt_deps(self):
+        sale = make_addon("sale", manifest={"external_dependencies": {"deb": ["libssl-dev"]}})
+        account = make_addon(
+            "account",
+            manifest={"external_dependencies": {"deb": ["libssl-dev", "postgresql-client"]}},
+        )
+        addons = make_addons(sale, account)
+        assert addons.apt_dependencies == ["libssl-dev", "postgresql-client"]
+
+    def test_no_apt_deps(self):
+        addons = make_addons(make_addon("sale"))
+        assert addons.apt_dependencies == []
+
+    def test_aggregates_npm_deps(self):
+        sale = make_addon("sale", manifest={"external_dependencies": {"npm": {"sass": "1.0"}}})
+        crm = make_addon("crm", manifest={"external_dependencies": {"npm": {"less": "2.0"}}})
+        addons = make_addons(sale, crm)
+        assert sorted(addons.npm_dependencies) == ["less@2.0", "sass@1.0"]
+
+    def test_aggregates_gem_deps(self):
+        sale = make_addon("sale", manifest={"external_dependencies": {"gem": ["sassc"]}})
+        account = make_addon("account", manifest={"external_dependencies": {"gem": ["bootstrap"]}})
+        addons = make_addons(sale, account)
+        assert addons.gem_dependencies == ["bootstrap", "sassc"]
+
+
 class TestAddonsGenerateYaml:
     def test_generate_addons_yaml(self):
         sale = make_addon("sale", git_repo="https://github.com/OCA/sale-workflow.git")

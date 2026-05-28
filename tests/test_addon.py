@@ -106,6 +106,44 @@ class TestAddonProperties:
             assert addon.git_branch == "16.0"
 
 
+class TestDependencies:
+    def test_python_dependencies(self):
+        addon = make_addon(manifest={"external_dependencies": {"python": ["babel", "num2words"]}})
+        assert addon.python_dependencies == ["babel", "num2words"]
+
+    def test_python_dependencies_empty(self):
+        assert make_addon().python_dependencies == []
+
+    def test_apt_dependencies(self):
+        addon = make_addon(
+            manifest={"external_dependencies": {"deb": ["libssl-dev", "postgresql-client"]}}
+        )
+        assert addon.apt_dependencies == ["libssl-dev", "postgresql-client"]
+
+    def test_apt_dependencies_empty(self):
+        assert make_addon().apt_dependencies == []
+
+    def test_npm_dependencies_dict(self):
+        addon = make_addon(
+            manifest={"external_dependencies": {"npm": {"sass": "1.0", "less": "2.0"}}}
+        )
+        assert addon.npm_dependencies == ["sass@1.0", "less@2.0"]
+
+    def test_npm_dependencies_list(self):
+        addon = make_addon(manifest={"external_dependencies": {"npm": ["sass", "less"]}})
+        assert addon.npm_dependencies == ["sass", "less"]
+
+    def test_npm_dependencies_empty(self):
+        assert make_addon().npm_dependencies == []
+
+    def test_gem_dependencies(self):
+        addon = make_addon(manifest={"external_dependencies": {"gem": ["sassc", "bootstrap"]}})
+        assert addon.gem_dependencies == ["sassc", "bootstrap"]
+
+    def test_gem_dependencies_empty(self):
+        assert make_addon().gem_dependencies == []
+
+
 class TestAnalysisProperties:
     def make_addon(self, **kwargs):
         addon = Addon(

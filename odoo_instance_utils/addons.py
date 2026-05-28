@@ -132,6 +132,24 @@ class Addon:
         return self.manifest.get("external_dependencies", {}).get("python", [])
 
     @property
+    def apt_dependencies(self) -> list[str]:
+        """System packages from the manifest's ``external_dependencies.deb``."""
+        return self.manifest.get("external_dependencies", {}).get("deb", [])
+
+    @property
+    def npm_dependencies(self) -> list[str]:
+        """Node packages from the manifest's ``external_dependencies.npm``."""
+        deps = self.manifest.get("external_dependencies", {}).get("npm", {})
+        if isinstance(deps, dict):
+            return [f"{pkg}@{ver}" for pkg, ver in deps.items()]
+        return deps
+
+    @property
+    def gem_dependencies(self) -> list[str]:
+        """Ruby gems from the manifest's ``external_dependencies.gem``."""
+        return self.manifest.get("external_dependencies", {}).get("gem", [])
+
+    @property
     def auto_install(self):
         return self.manifest.get("auto_install", False)
 
@@ -162,6 +180,10 @@ class Addon:
             "missing_from_filesystem": self.missing_from_filesystem,
             "version_mismatch": self.version_mismatch,
             "mismatch_detected": self.mismatch_detected,
+            "python_dependencies": self.python_dependencies,
+            "apt_dependencies": self.apt_dependencies,
+            "npm_dependencies": self.npm_dependencies,
+            "gem_dependencies": self.gem_dependencies,
         }
 
 
@@ -244,8 +266,28 @@ class Addons:
         dependencies = []
         for addon in self.addons:
             dependencies.extend(addon.python_dependencies)
-
         return list(set(dependencies))
+
+    @property
+    def apt_dependencies(self) -> list[str]:
+        deps: list[str] = []
+        for addon in self.addons:
+            deps.extend(addon.apt_dependencies)
+        return sorted(set(deps))
+
+    @property
+    def npm_dependencies(self) -> list[str]:
+        deps: list[str] = []
+        for addon in self.addons:
+            deps.extend(addon.npm_dependencies)
+        return sorted(set(deps))
+
+    @property
+    def gem_dependencies(self) -> list[str]:
+        deps: list[str] = []
+        for addon in self.addons:
+            deps.extend(addon.gem_dependencies)
+        return sorted(set(deps))
 
     @staticmethod
     def _find_git_repo(path: str) -> str:

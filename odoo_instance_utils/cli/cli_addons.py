@@ -68,9 +68,9 @@ def addons_lint(filepath):
 @click.option(
     "--format",
     "fmt",
-    type=click.Choice(["python", "json"]),
+    type=click.Choice(["python", "json", "full"]),
     default="python",
-    help="Output format (default: python = foundry_addons.py)",
+    help="Output format (python=foundry_addons.py, json=spec only, full=spec+repos+lock)",
 )
 @click.option(
     "-o",
@@ -89,7 +89,15 @@ def addons_capture(ctx, fmt, output):
     instance = OdooInstance(env=env)  # type: ignore[operator]
     spec = AddonSpec.from_instance(instance)
 
-    if fmt == "json":
+    if fmt == "full":
+        import json
+
+        data = _spec_to_json(spec)
+        data["repos_yaml"] = instance.addons.generate_repos_yaml()
+        data["addons_yaml"] = instance.addons.generate_addons_yaml()
+        data["repos_lock"] = instance.addons.generate_repos_lock()
+        click.echo(json.dumps(data))
+    elif fmt == "json":
         import json
 
         click.echo(json.dumps(_spec_to_json(spec)))
