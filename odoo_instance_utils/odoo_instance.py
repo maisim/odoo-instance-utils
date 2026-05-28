@@ -32,27 +32,11 @@ class OdooInstance:
         self.version = odoo.release.version
         self.major_version = odoo.release.major_version
         self.addons = Addons(addons_paths=odoo.tools.config["addons_path"])
-        self.update_addons_status()
+        self.addons.fill_from_odoo_db(env)  # DB first: authoritative list
+        self.addons.fill_from_addons_paths()  # FS second: paths, git_repo, manifests
 
     def __str__(self):
         return f"Odoo {self.env.cr.dbname}"
-
-    def update_addons_status(self) -> None:
-        """Update the status of installed addons and their dependencies."""
-        OdooInstanceModule = self.env["ir.module.module"]
-        for module in OdooInstanceModule.search(
-            [("state", "in", ["installed", "to upgrade", "to remove", "uninstalled"])]
-        ):
-            addon = self.addons[module.name]
-            addon.db_version = module.installed_version or ""
-            addon.db_state = module.state
-            if module.state in ("installed", "to upgrade"):
-                addon.is_installed = True
-            if module.state == "to upgrade":
-                addon.needs_upgrade = True
-            for dep in module.dependencies_id:
-                self.addons[dep.name].is_dependency_of.append(addon)
-                addon.dependencies.append(self.addons[dep.name])
 
     def install_addons(self, addons_names: List[str]) -> List[str]:
         """Install addons by name and return the list of installed addon names."""

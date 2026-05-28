@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import click
@@ -65,32 +64,6 @@ def addons_lint(filepath):
     click.echo(f"  selections = {len(spec.selections)}")
 
 
-def _write_spec(spec: AddonSpec, output: str) -> None:
-    """Serialize *spec* as ``foundry_addons.py`` and write to *output*."""
-    lines: list[str] = [
-        '"""Addon specification captured from live instance."""',
-        "",
-        "from odoo_instance_utils.spec import AddonRepo, AddonSelection, AddonSpec",
-        "",
-        "addon_spec = AddonSpec(",
-        "    repos=(",
-    ]
-    for repo in spec.repos:
-        lines.append(f"        AddonRepo(name={repo.name!r}, url={repo.url!r},")
-        lines.append(f"                 remote={repo.remote!r}, target={repo.target!r}),")
-    lines.append("    ),")
-    lines.append("    selections=(")
-    for sel in spec.selections:
-        lines.append(f"        AddonSelection(repo={sel.repo!r}, modules={sel.modules!r}),")
-    lines.append("    ),")
-    lines.append(")")
-
-    content = "\n".join(lines) + "\n"
-    Path(output).write_text(content)
-    click.echo(f"foundry_addons.py written to {output}")
-    click.echo(f"  {len(spec.repos)} repos, {sum(len(s.modules) for s in spec.selections)} modules")
-
-
 @addons_group.command("capture")
 @click.option(
     "--format",
@@ -103,12 +76,12 @@ def _write_spec(spec: AddonSpec, output: str) -> None:
     "-o",
     "--output",
     type=click.Path(),
-    default="foundry_addons.py",
-    help="Output file path (default: foundry_addons.py)",
+    default=None,
+    help="Output file path (default: stdout)",
 )
 @click.pass_context
 def addons_capture(ctx, fmt, output):
-    """Generate a foundry_addons.py file from the live instance."""
+    """Capture the addon spec from the live instance."""
     _require_odoo(ctx)
     from odoo_instance_utils import OdooInstance
 
@@ -120,8 +93,16 @@ def addons_capture(ctx, fmt, output):
         import json
 
         click.echo(json.dumps(_spec_to_json(spec)))
+    elif output:
+        from pathlib import Path
+
+        Path(output).write_text(spec.to_python())
+        click.echo(f"foundry_addons.py written to {output}")
+        click.echo(
+            f"  {len(spec.repos)} repos, {sum(len(s.modules) for s in spec.selections)} modules"
+        )
     else:
-        _write_spec(spec, output)
+        click.echo(spec.to_python())
 
 
 @addons_group.command("verify")
@@ -302,6 +283,33 @@ def generate_repos_yaml(ctx, output=None, use_head=False):
     click.echo(f"Repos YAML file generated at {output}")
 
 
+@addons_group.command("generate-repos-lock")
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(),
+    required=False,
+    help="Output file for repos.lock.yml (default: stdout)",
+)
+@click.pass_context
+def generate_repos_lock(ctx, output=None):
+    """Generate repos.lock.yml with pinned SHAs for reproducible builds."""
+    _require_odoo(ctx)
+    from pathlib import Path
+
+    from odoo_instance_utils import OdooInstance
+
+    env = ctx.obj["odoo_env"]
+    odoo_instance = OdooInstance(env=env)  # type: ignore[operator]
+    addons = odoo_instance.addons(installed=ctx.obj["installed_addons_only"])
+    content = addons.generate_repos_lock()
+    if not output:
+        click.echo(content)
+        return
+    Path(output).write_text(content)
+    click.echo(f"repos.lock.yml written to {output}")
+
+
 @addons_group.command("audit")
 @click.pass_context
 def audit_addons(ctx):
@@ -331,7 +339,7 @@ def audit_addons(ctx):
         if not addon.db_state and not addon.is_installed:
             continue  # filesystem-only, never touched by Odoo
 
-        fs_ver = addon.version or ("(missing)" if not addon.path else "(no version)")
+        fs_ver = addon.fs_version or ("(missing)" if not addon.path else "(no version)")
         db_ver = addon.db_version or "-"
         state = addon.db_state or "fs-only"
         repo = addon.repo_name or "-"
@@ -345,10 +353,12 @@ def audit_addons(ctx):
         flag = ""
         if addon.needs_upgrade:
             flag = " !"
-        elif fs_ver and db_ver and fs_ver != "-" and db_ver != "-" and fs_ver != db_ver:
+        elif addon.version_mismatch:
             flag = " ~"  # version differs between fs and db
-        elif not addon.path and addon.is_installed:
+        elif addon.missing_from_filesystem:
             flag = " ?"  # installed in DB but missing from filesystem
+        elif addon.conflicting_path:
+            flag = " #"  # same addon name found at another path
 
         line = (
             f"{addon.name:<{col['name']}}  "

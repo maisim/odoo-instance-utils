@@ -593,7 +593,6 @@ wheels = [
 
 [[package]]
 name = "odoo-instance-utils"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml", version = "6.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
