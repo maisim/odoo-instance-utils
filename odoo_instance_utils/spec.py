@@ -110,13 +110,10 @@ class AddonSpec:
     def from_instance(cls, odoo_instance: OdooInstance) -> AddonSpec:
         """Capture an ``AddonSpec`` from a live Odoo instance.
 
-        Scans all addon paths, groups modules by their git remote origin,
-        pins each repo to its current HEAD, and selects all modules
-        present in each repo.
+        Groups modules by their git remote origin, pins each repo to its
+        current HEAD, and selects all modules present in each repo.
         """
-        from odoo_instance_utils.addons import Addons
-
-        addons = Addons(addons_paths=odoo_instance.addons.addons_paths)
+        addons = odoo_instance.addons
         sources = addons.build_sources_list()
 
         repos: list[AddonRepo] = []
@@ -241,3 +238,24 @@ class AddonSpec:
         ]
 
         return cls(repos=tuple(repos_list), selections=tuple(selections))
+
+    def to_python(self) -> str:
+        """Render this spec as the content of a ``foundry_addons.py`` file."""
+        lines = [
+            '"""Addon specification."""',
+            "",
+            "from odoo_instance_utils.spec import AddonRepo, AddonSelection, AddonSpec",
+            "",
+            "addon_spec = AddonSpec(",
+            "    repos=(",
+        ]
+        for repo in self.repos:
+            lines.append(f"        AddonRepo(name={repo.name!r}, url={repo.url!r},")
+            lines.append(f"                 remote={repo.remote!r}, target={repo.target!r}),")
+        lines.append("    ),")
+        lines.append("    selections=(")
+        for sel in self.selections:
+            lines.append(f"        AddonSelection(repo={sel.repo!r}, modules={sel.modules!r}),")
+        lines.append("    ),")
+        lines.append(")")
+        return "\n".join(lines) + "\n"
