@@ -96,6 +96,12 @@ def addons_capture(ctx, fmt, output):
         data["repos_yaml"] = instance.addons.generate_repos_yaml()
         data["addons_yaml"] = instance.addons.generate_addons_yaml()
         data["repos_lock"] = instance.addons.generate_repos_lock()
+        data["dependencies"] = {
+            "pip": instance.addons.python_dependencies,
+            "apt": instance.addons.apt_dependencies,
+            "npm": instance.addons.npm_dependencies,
+            "gem": instance.addons.gem_dependencies,
+        }
         click.echo(json.dumps(data))
     elif fmt == "json":
         import json
