@@ -1,32 +1,13 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import click
 
-from odoo_instance_utils.spec import AddonSpec
-from odoo_instance_utils.spec_loader import SpecLoadError, load_spec
-
-if TYPE_CHECKING:
-    pass
-
-
-def _spec_to_json(spec: AddonSpec) -> dict:
-    """Serialize *spec* to the JSON format expected by :meth:`AddonSpec.from_json`."""
-    repos = {}
-    for r in spec.repos:
-        repos[r.name] = {
-            "url": r.url,
-            "remote": r.remote,
-            "branch": r.target.split()[-1] if " " in r.target else "",
-            "head": r.target if " " not in r.target else "",
-        }
-    addons = {}
-    for s in spec.selections:
-        for mod in s.modules:
-            addons[mod] = {"repo": s.repo, "version": ""}
-    return {"repos": repos, "addons": addons}
+from odoo_instance_utils.addons_yaml import load_addons_yaml
+from odoo_instance_utils.repos_yaml import load_repos_yaml, validate_repos_yaml
+from odoo_instance_utils.verify import diff_addons_yaml
 
 
 def _require_odoo(ctx: click.Context) -> None:
@@ -46,22 +27,43 @@ def addons_group():
 
 
 @addons_group.command("lint")
-@click.argument("filepath", type=click.Path(exists=True), required=True)
-def addons_lint(filepath):
-    """Validate a foundry_addons.py file.
+@click.argument(
+    "src_dir",
+    type=click.Path(exists=True, file_okay=False),
+    default="odoo/custom/src",
+    required=False,
+)
+def addons_lint(src_dir):
+    """Validate the committed addon source declaration.
 
-    FILEPATH must be a Python module exporting an ``addon_spec``
-    of type ``AddonSpec``.
+    SRC_DIR must contain ``repos.yaml`` (and optionally ``addons.yaml``).
+    Defaults to ``odoo/custom/src``.
     """
-    try:
-        spec = load_spec(filepath)
-    except SpecLoadError as exc:
-        click.echo(f"error: {exc}", err=True)
+    src = Path(src_dir)
+    repos_path = src / "repos.yaml"
+    if not repos_path.is_file():
+        click.echo(f"error: {repos_path} not found", err=True)
         sys.exit(1)
 
-    click.echo(f"ok: {filepath} is valid")
-    click.echo(f"  repos     = {len(spec.repos)}")
-    click.echo(f"  selections = {len(spec.selections)}")
+    try:
+        stanzas = load_repos_yaml(repos_path)
+        validate_repos_yaml(stanzas)
+    except Exception as exc:
+        click.echo(f"error: {repos_path}: {exc}", err=True)
+        sys.exit(1)
+
+    addons_path = src / "addons.yaml"
+    declared = 0
+    if addons_path.is_file():
+        try:
+            declared = len(load_addons_yaml(addons_path))
+        except Exception as exc:
+            click.echo(f"error: {addons_path}: {exc}", err=True)
+            sys.exit(1)
+
+    click.echo(f"ok: {src_dir} is valid")
+    click.echo(f"  repos   = {len(stanzas)}")
+    click.echo(f"  addons  = {declared}")
 
 
 @addons_group.command("resolve")
@@ -119,55 +121,53 @@ def addons_resolve(ctx, module_name, fmt):
 @click.option(
     "--format",
     "fmt",
-    type=click.Choice(["python", "json", "full"]),
-    default="python",
-    help="Output format (python=foundry_addons.py, json=spec only, full=spec+repos+lock)",
+    type=click.Choice(["files", "full"]),
+    default="files",
+    help="files=write repos.yaml+addons.yaml+repos.lock.yaml, full=single JSON blob",
 )
 @click.option(
     "-o",
     "--output",
-    type=click.Path(),
+    type=click.Path(file_okay=False),
     default=None,
-    help="Output file path (default: stdout)",
+    help="Output directory for 'files' format (default: odoo/custom/src)",
 )
 @click.pass_context
 def addons_capture(ctx, fmt, output):
-    """Capture the addon spec from the live instance."""
+    """Capture the addon source declaration from the live instance."""
     _require_odoo(ctx)
     from odoo_instance_utils import OdooInstance
 
     env = ctx.obj["odoo_env"]
     instance = OdooInstance(env=env)  # type: ignore[operator]
-    spec = AddonSpec.from_instance(instance)
+    addons = instance.addons
 
     if fmt == "full":
         import json
 
-        data = _spec_to_json(spec)
-        data["repos_yaml"] = instance.addons.generate_repos_yaml()
-        data["addons_yaml"] = instance.addons.generate_addons_yaml()
-        data["repos_lock"] = instance.addons.generate_repos_lock()
-        data["dependencies"] = {
-            "pip": instance.addons.python_dependencies,
-            "apt": instance.addons.apt_dependencies,
-            "npm": instance.addons.npm_dependencies,
-            "gem": instance.addons.gem_dependencies,
-        }
-        click.echo(json.dumps(data))
-    elif fmt == "json":
-        import json
-
-        click.echo(json.dumps(_spec_to_json(spec)))
-    elif output:
-        from pathlib import Path
-
-        Path(output).write_text(spec.to_python())
-        click.echo(f"foundry_addons.py written to {output}")
         click.echo(
-            f"  {len(spec.repos)} repos, {sum(len(s.modules) for s in spec.selections)} modules"
+            json.dumps(
+                {
+                    "repos_yaml": addons.generate_repos_yaml(),
+                    "addons_yaml": addons.generate_addons_yaml(),
+                    "repos_lock": addons.generate_repos_lock(),
+                    "dependencies": {
+                        "pip": addons.python_dependencies,
+                        "apt": addons.apt_dependencies,
+                        "npm": addons.npm_dependencies,
+                        "gem": addons.gem_dependencies,
+                    },
+                }
+            )
         )
-    else:
-        click.echo(spec.to_python())
+        return
+
+    out_dir = Path(output) if output else Path("odoo/custom/src")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "repos.yaml").write_text(addons.generate_repos_yaml())
+    (out_dir / "addons.yaml").write_text(addons.generate_addons_yaml())
+    (out_dir / "repos.lock.yaml").write_text(addons.generate_repos_lock())
+    click.echo(f"wrote repos.yaml, addons.yaml, repos.lock.yaml to {out_dir}")
 
 
 @addons_group.command("verify")
@@ -176,25 +176,20 @@ def addons_capture(ctx, fmt, output):
     "--file",
     "filepath",
     type=click.Path(exists=True),
-    default="foundry_addons.py",
-    help="Path to foundry_addons.py (default: ./foundry_addons.py)",
+    default="odoo/custom/src/addons.yaml",
+    help="Path to addons.yaml (default: ./odoo/custom/src/addons.yaml)",
 )
 @click.pass_context
 def addons_verify(ctx, filepath):
-    """Compare foundry_addons.py against the live instance."""
+    """Compare a declared addons.yaml against the live instance."""
     _require_odoo(ctx)
     from odoo_instance_utils import OdooInstance
 
     env = ctx.obj["odoo_env"]
     instance = OdooInstance(env=env)  # type: ignore[operator]
 
-    try:
-        spec = load_spec(filepath)
-    except SpecLoadError as exc:
-        click.echo(f"error: {exc}", err=True)
-        sys.exit(1)
-
-    issues = spec.diff(instance)
+    declared = load_addons_yaml(filepath)
+    issues = diff_addons_yaml(declared, instance.addons)
     if not issues:
         click.echo(f"ok: {filepath} matches the live instance")
         return

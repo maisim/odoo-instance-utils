@@ -4,15 +4,11 @@ import os
 import subprocess
 import sys
 from ast import literal_eval
-from typing import TYPE_CHECKING
 
 import yaml
 
 from .exceptions import ConflictError
 from .hashing import fingerprint_module
-
-if TYPE_CHECKING:
-    from .spec import AddonRepo as AddonRepoType
 
 if sys.version_info < (3, 8):
     import importlib_metadata
@@ -32,7 +28,6 @@ class Addon:
         self.manifest = {}
         self.db_version: str = ""  # installed_version from ir.module.module
         self.db_state: str = ""  # state from ir.module.module
-        self.repo_ref: AddonRepoType | None = None  # link to declarative AddonRepo
         self.conflicting_path: str = ""  # set when same addon name found at another path
 
     def __str__(self) -> str:

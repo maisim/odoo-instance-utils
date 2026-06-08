@@ -1,5 +1,4 @@
 from .exceptions import ConflictError, IntegrityError
-from .spec import AddonRepo, AddonSelection, AddonSpec, OCAAddonRepo
 
 # OdooInstance and Addons are imported lazily — they require the `odoo`
 # module which is only available inside an Odoo shell.
@@ -23,12 +22,8 @@ def __getattr__(name: str) -> object:
 
 __all__ = [
     "Addon",
-    "AddonRepo",
-    "AddonSelection",
-    "AddonSpec",
     "Addons",
     "ConflictError",
     "IntegrityError",
-    "OCAAddonRepo",
     "OdooInstance",
 ]
