@@ -229,32 +229,40 @@ class Addons:
 
     @property
     def addons(self):
+        """Return the list of addons after applying all active filters.
+
+        Filters compose: they are applied in sequence rather than
+        short-circuiting, so ``installed=True`` combined with
+        ``include_auto_installed_addons=False`` correctly returns only
+        installed addons that are not auto-installed.
+        """
+        result = self._addons
+
         if self.needs_upgrade is True:
-            return [a for a in self._addons if a.needs_upgrade]
+            result = [a for a in result if a.needs_upgrade]
 
         if self.installed is True:
-            return [a for a in self._addons if a.is_installed]
+            result = [a for a in result if a.is_installed]
         elif self.installed is False:
-            return [a for a in self._addons if not a.is_installed]
+            result = [a for a in result if not a.is_installed]
 
         if self.include_auto_installed_addons is False:
-            return [a for a in self._addons if not a.auto_install]
+            result = [a for a in result if not a.auto_install]
 
         if self.minimize_list:
             # Keep only addons not already covered as a dependency of another included addon
-            addons = [
+            result = [
                 a
-                for a in self._addons
+                for a in result
                 if a.is_installed
                 and not any(
                     a.name in [d.name for d in other.dependencies]
-                    for other in self._addons
+                    for other in result
                     if other.is_installed
                 )
             ]
-            return addons
 
-        return self._addons
+        return result
 
     def transitive_dependencies(self, module_name: str) -> set[str]:
         """Return all module names reachable from *module_name* via ``dependencies``.
@@ -309,10 +317,14 @@ class Addons:
 
         An addon may not live in a git repo at all — in that case the empty
         string is returned and the addon is simply not associated with any repo.
+
+        Supports both regular repos (``.git`` directory) and git worktrees
+        (``.git`` file containing a ``gitdir:`` reference).
         """
         search_dir = path
         while search_dir != os.path.dirname(search_dir):
-            if os.path.isdir(os.path.join(search_dir, ".git")):
+            dot_git = os.path.join(search_dir, ".git")
+            if os.path.isdir(dot_git) or os.path.isfile(dot_git):
                 result = subprocess.run(
                     ["git", "config", "--get", "remote.origin.url"],
                     cwd=search_dir,

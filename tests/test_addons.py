@@ -617,3 +617,91 @@ class TestResolveGitState:
         sale = addons["sale"]
         assert sale.path == str(addon_dir)
         assert sale.manifest["version"] == "16.0.1.0.0"
+
+
+class TestFindGitRepoWorktree:
+    """Tests for _find_git_repo with git worktrees (.git as a file)."""
+
+    def test_git_dir(self, tmp_path):
+        """Regular repo: .git is a directory."""
+        addon_dir = tmp_path / "my_addon"
+        addon_dir.mkdir()
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+
+        with patch("odoo_instance_utils.addons.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="https://github.com/OCA/repo.git\n")
+            result = Addons._find_git_repo(str(addon_dir))
+
+        assert result == "https://github.com/OCA/repo.git"
+
+    def test_git_file_worktree(self, tmp_path):
+        """Worktree: .git is a file containing a gitdir: reference."""
+        addon_dir = tmp_path / "my_addon"
+        addon_dir.mkdir()
+        # In a worktree, .git is a file, not a directory
+        git_file = tmp_path / ".git"
+        git_file.write_text("gitdir: /main/.git/worktrees/wt1\n")
+
+        with patch("odoo_instance_utils.addons.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="https://github.com/OCA/repo.git\n")
+            result = Addons._find_git_repo(str(addon_dir))
+
+        assert result == "https://github.com/OCA/repo.git"
+
+    def test_no_git_at_all(self, tmp_path):
+        """No .git file or directory anywhere."""
+        addon_dir = tmp_path / "my_addon"
+        addon_dir.mkdir()
+
+        result = Addons._find_git_repo(str(addon_dir))
+        assert result == ""
+
+    def test_worktree_git_repo_populated_in_addon(self, tmp_path):
+        """Integration: addon from a worktree gets its git_repo set."""
+        addon_dir = tmp_path / "my_addon"
+        addon_dir.mkdir()
+        (addon_dir / "__manifest__.py").write_text('{"name": "My Addon", "depends": []}')
+        # Worktree .git is a file
+        git_file = tmp_path / ".git"
+        git_file.write_text("gitdir: /main/.git/worktrees/wt1\n")
+
+        with patch("odoo_instance_utils.addons.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="https://github.com/OCA/repo.git\n")
+            addons = Addons(addons_paths=str(tmp_path))
+
+        assert addons._addons[0].git_repo == "https://github.com/OCA/repo.git"
+        assert addons._addons[0].repo_name == "repo"
+
+
+class TestComposableFilters:
+    """Filters should compose rather than short-circuit."""
+
+    def test_installed_and_exclude_auto_installed(self):
+        """installed=True + include_auto_installed_addons=False composes correctly."""
+        crm = make_addon("crm", is_installed=True, auto_install=True)
+        sale = make_addon("sale", is_installed=True, auto_install=False)
+        account = make_addon("account", is_installed=False, auto_install=False)
+        addons = make_addons(crm, sale, account)(
+            installed=True, include_auto_installed_addons=False
+        )
+        assert list(addons) == [sale]
+
+    def test_installed_and_minimize(self):
+        """installed=True + minimize_list=True composes correctly."""
+        account = make_addon("account", is_installed=True)
+        sale = make_addon("sale", is_installed=True)
+        sale.dependencies = [account]
+        uninstalled = make_addon("uninstalled", is_installed=False)
+        addons = make_addons(sale, account, uninstalled)(installed=True, minimize_list=True)
+        result_names = [a.name for a in addons]
+        assert "sale" in result_names
+        assert "account" not in result_names
+        assert "uninstalled" not in result_names
+
+    def test_exclude_auto_installed_no_installed_filter(self):
+        """include_auto_installed_addons=False alone returns all non-auto addons."""
+        crm = make_addon("crm", is_installed=True, auto_install=True)
+        sale = make_addon("sale", is_installed=False, auto_install=False)
+        addons = make_addons(crm, sale)(include_auto_installed_addons=False)
+        assert list(addons) == [sale]
