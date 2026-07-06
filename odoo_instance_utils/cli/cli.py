@@ -19,6 +19,10 @@ try:
     from .cli_view import view_group
 except ImportError:
     view_group = None  # type: ignore[assignment]
+try:
+    from .cli_translations import translations_group
+except ImportError:
+    translations_group = None  # type: ignore[assignment]
 
 try:
     import click_odoo
@@ -64,6 +68,6 @@ def main(ctx, **kwargs):
 
 
 main.add_command(addons_group)
-for _group in (filters_group, exports_group, view_group):
+for _group in (filters_group, exports_group, view_group, translations_group):
     if _group is not None:
         main.add_command(_group)
