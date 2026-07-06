@@ -1,3 +1,23 @@
+## v0.5.0 (2026-07-06)
+
+### Feat
+
+- **translations**: add odoo-instance translations load command
+- native repos.yaml/addons.yaml + content-addressed vault primitives
+- transitive_dependencies() and addons resolve CLI command
+- **capture**: include auto-detected dependencies in --format full
+- add apt/npm/gem dependency properties, --format full on capture
+- **addons**: DB-first discovery, symlink-aware FS scan, and repos.lock generation
+
+### Fix
+
+- **addons**: support git worktrees + make filters composable
+- update project URLs to point to GitHub repository
+
+### Refactor
+
+- **spec**: use existing OdooInstance.addons in from_instance, add to_python()
+
 ## v0.4.3 (2026-05-20)
 
 ### Fix
