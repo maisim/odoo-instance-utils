@@ -4,6 +4,7 @@ import click
 
 from ._guards import env_options, has_odoo
 from .cli_addons import addons_group
+from .cli_security import security_group
 
 # Subcommand groups that require the `odoo` module (only available inside
 # an Odoo shell).  We import them best-effort so that `odoo-instance addons
@@ -43,6 +44,7 @@ def main(ctx, **kwargs):
 
 
 main.add_command(addons_group)
+main.add_command(security_group)
 for _group in (filters_group, exports_group, view_group, translations_group):
     if _group is not None:
         main.add_command(_group)

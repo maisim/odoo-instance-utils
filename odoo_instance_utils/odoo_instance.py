@@ -7,6 +7,14 @@ import odoo
 from odoo.exceptions import ValidationError
 
 from .addons import Addons
+from .security_config import (
+    AclSpec,
+    GroupSpec,
+    LockSpec,
+    MenuSpec,
+    RoleSpec,
+    SecurityConfig,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -164,6 +172,179 @@ class OdooInstance:
             except ValidationError as e:
                 _logger.warning("Error creating export line: %s. Skipping", e)
                 continue
+
+    def dump_security_config(
+        self,
+        models: List[str] | None = None,
+        groups: List[str] | None = None,
+        roles: List[str] | None = None,
+    ) -> SecurityConfig:
+        """Read the live security state into a configuration object.
+
+        + models: restrict ACL lines to these technical model names. ``None``
+          reads every model.
+        + groups: restrict groups to these xmlids. ``None`` reads every group.
+        + roles: restrict roles to these xmlids. ``None`` reads every role.
+
+        The scope arguments exist because a real database carries thousands of
+        ACL lines shipped by Odoo and the OCA addons: reading everything is
+        what a snapshot wants, reading a named subset is what a policy capture
+        wants.
+
+        Two things the model deliberately does not carry, and which are
+        therefore absent from the result: ACL lines with no group (global
+        rights, visible to every user) and menus visible to everyone. Locks
+        are empty until the enforcement module exists.
+        """
+        group_specs, group_keys = self._read_groups(groups)
+        return SecurityConfig(
+            groups=group_specs,
+            acl=tuple(self._read_acl(models, group_keys)),
+            menus=tuple(self._read_menus(group_keys)),
+            roles=tuple(self._read_roles(roles, group_keys)),
+            locks=tuple(self._read_locks()),
+        )
+
+    def _xmlid_map(self, model: str, res_ids: List[int]) -> Dict[int, str]:
+        """Map record ids to one xmlid each, chosen deterministically.
+
+        A record may carry several xmlids; the alphabetically first
+        ``module.name`` wins so that repeated reads produce the same answer.
+        """
+        if not res_ids:
+            return {}
+        data = self.env["ir.model.data"].search(
+            [("model", "=", model), ("res_id", "in", list(res_ids))]
+        )
+        mapping: Dict[int, str] = {}
+        for record in sorted(data, key=lambda d: (d.module, d.name)):
+            mapping.setdefault(record.res_id, f"{record.module}.{record.name}")
+        return mapping
+
+    def _identity(self, model: str, record, xmlids: Dict[int, str]) -> str:
+        """Return a stable identity for *record*, falling back to its id.
+
+        A group created by hand in the interface carries no xmlid. Odoo's own
+        convention for such records is used instead, so the entry is not lost
+        — at the cost of an identity that is stable within one database but
+        not across two.
+        """
+        return xmlids.get(record.id) or f"{model},{record.id}"
+
+    def _read_groups(self, wanted: List[str] | None) -> tuple:
+        """Read groups, returning the specs and the keys used to match them."""
+        domain = []
+        if wanted:
+            ids = [self.env.ref(ref, raise_if_not_found=False).id for ref in wanted]
+            domain = [("id", "in", [i for i in ids if i])]
+        records = self.env["res.groups"].search(domain, order="id")
+        xmlids = self._xmlid_map("res.groups", records.ids)
+        keyed = {record.id: self._identity("res.groups", record, xmlids) for record in records}
+
+        specs = []
+        for record in records:
+            implied_ids = record.implied_ids.ids
+            implied_xmlids = self._xmlid_map("res.groups", implied_ids)
+            implied = [
+                keyed.get(group.id) or self._identity("res.groups", group, implied_xmlids)
+                for group in record.implied_ids
+            ]
+            specs.append(
+                GroupSpec(
+                    name=record.name or "",
+                    xmlid=keyed[record.id],
+                    implied_ids=tuple(sorted(implied)),
+                )
+            )
+        return tuple(specs), keyed
+
+    def _read_acl(self, models: List[str] | None, group_keys: Dict[int, str]) -> List[AclSpec]:
+        """Read ``ir.model.access`` lines that carry a group."""
+        domain = []
+        if models:
+            domain = [("model_id.model", "in", list(models))]
+        records = self.env["ir.model.access"].search(domain, order="id")
+        access_xmlids = self._xmlid_map(
+            "res.groups", [r.group_id.id for r in records if r.group_id]
+        )
+        specs = []
+        for record in records:
+            if not record.group_id:
+                continue
+            group = group_keys.get(record.group_id.id) or self._identity(
+                "res.groups", record.group_id, access_xmlids
+            )
+            specs.append(
+                AclSpec(
+                    model=record.model_id.model,
+                    group=group,
+                    perm_read=record.perm_read,
+                    perm_write=record.perm_write,
+                    perm_create=record.perm_create,
+                    perm_unlink=record.perm_unlink,
+                )
+            )
+        return specs
+
+    def _read_menus(self, group_keys: Dict[int, str]) -> List[MenuSpec]:
+        """Read menus that are restricted to at least one group."""
+        records = self.env["ir.ui.menu"].search([("groups_id", "!=", False)], order="id")
+        menu_xmlids = self._xmlid_map("ir.ui.menu", records.ids)
+        menu_group_xmlids = self._xmlid_map(
+            "res.groups", [g.id for r in records for g in r.groups_id]
+        )
+        specs = []
+        for record in records:
+            groups = [
+                group_keys.get(group.id) or self._identity("res.groups", group, menu_group_xmlids)
+                for group in record.groups_id
+            ]
+            specs.append(
+                MenuSpec(
+                    menu=self._identity("ir.ui.menu", record, menu_xmlids),
+                    groups=tuple(sorted(groups)),
+                )
+            )
+        return specs
+
+    def _read_roles(self, wanted: List[str] | None, group_keys: Dict[int, str]) -> List[RoleSpec]:
+        """Read ``base_user_role`` roles, empty when that addon is absent."""
+        Role = self.env.get("res.users.role")
+        if Role is None:
+            return []
+
+        domain = []
+        if wanted:
+            ids = [self.env.ref(ref, raise_if_not_found=False).id for ref in wanted]
+            domain = [("id", "in", [i for i in ids if i])]
+        records = Role.search(domain, order="id")
+        role_xmlids = self._xmlid_map("res.users.role", records.ids)
+        role_group_xmlids = self._xmlid_map(
+            "res.groups", [g.id for r in records for g in r.implied_ids]
+        )
+
+        specs = []
+        for record in records:
+            groups = [
+                group_keys.get(group.id) or self._identity("res.groups", group, role_group_xmlids)
+                for group in record.implied_ids
+            ]
+            specs.append(
+                RoleSpec(
+                    name=record.name or "",
+                    xmlid=self._identity("res.users.role", record, role_xmlids),
+                    groups=tuple(sorted(groups)),
+                )
+            )
+        return specs
+
+    def _read_locks(self) -> List[LockSpec]:
+        """Read master-data locks.
+
+        Empty until the enforcement module exists: a lock only counts once
+        something enforces it, and nothing does yet.
+        """
+        return []
 
     @property
     def python_version(self) -> str:

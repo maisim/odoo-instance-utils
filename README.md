@@ -25,6 +25,7 @@ Commands:
   addons        Addon management commands.
   exports       Export management commands.
   filters       Filter management commands.
+  security      Access-rights configuration commands.
   translations  Translation management commands.
   view          View management commands (requires click-odoo).
 ```
@@ -45,6 +46,47 @@ odoo-instance addons generate-addons-yaml   Generate addons.yaml for Doodba
 odoo-instance addons generate-repos-yaml    Generate repos.yaml for git-aggregator
 odoo-instance addons generate-repos-lock    Generate repos.lock.yaml with pinned SHAs
 ```
+
+#### Security
+
+```
+odoo-instance security lint [CONFIG_DIR]    Validate the committed configuration (offline)
+odoo-instance security capture [-o DIR]     Capture the managed subset from the live instance
+odoo-instance security snapshot [-o FILE]   Capture the complete state from the live instance
+```
+
+Describes the access rights a project manages as five JSON files, one per
+object, so they can be reviewed, versioned and compared:
+
+```
+odoo/custom/src/security/
+    groups.json     groups the project owns or references
+    acl.json        ir.model.access lines
+    menus.json      menu visibility granted to groups
+    roles.json      base_user_role roles and the groups they carry
+    locks.json      master-data write locks
+```
+
+`lint` runs with no Odoo and no click-odoo: it checks the schema, the shape
+of every group reference, and the cross-file consistency. Whether a group or
+model actually exists needs a live instance, and is left to a check against
+one.
+
+A group or role is identified either by a `slug`, a local name for something
+the project owns, or by an `xmlid`, the fully-qualified name of something
+another module owns — exactly one of the two. Capturing yields xmlids, since
+that is what a running database holds; authoring yields slugs for what is
+about to be created. Both forms live in the same file, which is what makes
+capture output directly editable into a policy.
+
+`capture` is scoped by design (`--models`, `--groups`, `--roles`): a real
+database carries thousands of ACL lines shipped by Odoo and the OCA addons,
+which are not the project's to assert. `snapshot` records everything instead
+and is asserted by no one — it exists to show what a module update moved, so
+it is committed and compared rather than applied.
+
+Each file is rendered one record per line and sorted by identity, so repeated
+reads are byte-identical and a diff reads record by record.
 
 #### Exports
 
