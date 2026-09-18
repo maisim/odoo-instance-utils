@@ -5,6 +5,9 @@ from unittest.mock import MagicMock
 odoo_mock = MagicMock()
 odoo_mock.release.version = "16.0"
 odoo_mock.release.major_version = 16
+# click_odoo compares this to a tuple at import time; without a real value the
+# comparison is MagicMock < tuple and raises TypeError instead of importing.
+odoo_mock.release.version_info = (16, 0, 0, "final", 0)
 odoo_mock.tools.config = {"addons_path": ""}
 
 sys.modules["odoo"] = odoo_mock
