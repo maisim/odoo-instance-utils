@@ -6,18 +6,9 @@ from pathlib import Path
 import click
 
 from odoo_instance_utils.addons_yaml import load_addons_yaml
+from odoo_instance_utils.cli._guards import require_odoo as _require_odoo
 from odoo_instance_utils.repos_yaml import load_repos_yaml, validate_repos_yaml
 from odoo_instance_utils.verify import diff_addons_yaml
-
-
-def _require_odoo(ctx: click.Context) -> None:
-    """Raise :class:`click.UsageError` if the Odoo env is unavailable."""
-    if "odoo_env" not in ctx.obj:
-        raise click.UsageError(
-            "This command requires an Odoo environment. "
-            "Run inside an Odoo shell with the --env flag.",
-            ctx,
-        )
 
 
 @click.group("addons")
