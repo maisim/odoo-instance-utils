@@ -3,6 +3,7 @@ import sys
 
 import click
 
+from odoo_instance_utils.cli._guards import require_odoo as _require_odoo
 from odoo_instance_utils.views import diff, export
 
 
@@ -17,6 +18,7 @@ def view_group():
 @click.pass_context
 def export_view(ctx, xmlid):
     """Export an Odoo view to JSON via its external id (xmlid)"""
+    _require_odoo(ctx)
     env = ctx.obj["odoo_env"]
     view_data = export(env, xmlid)
     if not view_data:
@@ -33,6 +35,7 @@ def export_view(ctx, xmlid):
 @click.pass_context
 def diff_view(ctx, xmlid, filepath, verbose):
     """Compare an Odoo view with a local file via its external id (xmlid)"""
+    _require_odoo(ctx)
     env = ctx.obj["odoo_env"]
     result = diff(env, xmlid, filepath)
     if not result.get("found"):
