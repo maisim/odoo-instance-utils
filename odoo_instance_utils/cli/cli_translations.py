@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import click
 
+from odoo_instance_utils.cli._guards import require_odoo as _require_odoo
+
 
 @click.group("translations")
 def translations_group():
@@ -27,6 +29,7 @@ def load_translations(ctx, file, force):
     ``type``, ``name``, ``src``, ``value``, and optionally ``res_id``.
     See the README for a complete example of the expected file format.
     """
+    _require_odoo(ctx)
     from odoo_instance_utils.translations import load_translations_module
 
     env = ctx.obj["odoo_env"]

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import click
 
+from odoo_instance_utils.cli._guards import require_odoo as _require_odoo
+
 
 @click.group("filters")
 def filters_group():
@@ -13,6 +15,7 @@ def filters_group():
 @click.pass_context
 def list_filters(ctx):
     """List all filters with their id, name and model."""
+    _require_odoo(ctx)
     from odoo_instance_utils import OdooInstance
 
     env = ctx.obj["odoo_env"]
@@ -26,6 +29,7 @@ def list_filters(ctx):
 @click.pass_context
 def dump_filters(ctx, ids):
     """Dump filters."""
+    _require_odoo(ctx)
     from odoo_instance_utils import OdooInstance
 
     env = ctx.obj["odoo_env"]
@@ -39,6 +43,7 @@ def dump_filters(ctx, ids):
 @click.pass_context
 def restore_filters(ctx, filters):
     """Restore filters."""
+    _require_odoo(ctx)
     from odoo_instance_utils import OdooInstance
 
     env = ctx.obj["odoo_env"]
